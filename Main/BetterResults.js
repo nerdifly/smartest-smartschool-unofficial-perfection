@@ -654,29 +654,29 @@ function MakeGraph() {
          maxWidth: "90vw"
        });
 
-       // Settings button - positioned under the close button
-       const settingsButton = $("<button>")
-         .attr("id", "graph-settings-button")
-         .text("⚙️")
-         .css({
-           padding: "0.6rem",
-           backgroundColor: "#6c757d",
-           color: "white",
-           border: "none",
-           borderRadius: "50%",
-           cursor: "pointer",
-           width: "48px",
-           height: "48px",
-           fontSize: "1.2rem",
-           position: "absolute",
-           top: "70px",
-           right: "15px",
-           zIndex: 10,
-           display: "flex",
-           alignItems: "center",
-           justifyContent: "center",
-           boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
-         })
+        // Settings button - positioned next to the close button
+        const settingsButton = $("<button>")
+          .attr("id", "graph-settings-button")
+          .text("⚙️")
+          .css({
+            padding: "0.6rem",
+            backgroundColor: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "50%",
+            cursor: "pointer",
+            width: "48px",
+            height: "48px",
+            fontSize: "1.2rem",
+            position: "absolute",
+            top: "0.5rem",
+            right: "5rem",
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
+          })
          .on("click", function(e) {
            e.stopPropagation();
            settingsModalBg.show();
@@ -1521,22 +1521,40 @@ const GRAPH_CSS = `/* --- GENERAL --- */
 #modal-close-graph {
   font-family: 'Poppins', sans-serif;
   color: rgb(100, 100, 100);
-  padding: 0.4rem;
+  padding: 0.6rem;
   text-align: center;
-  transition: 100ms;
+  transition: all 200ms ease;
   position: absolute;
   right: 0.5rem;
-  background: none;
-  border: none;
+  top: 0.5rem;
+  background: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.4rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 #modal-close-graph:hover {
-  color: #dd0000;
+  background-color: #f8f9fa;
+  border-color: #dc3545;
+  color: #dc3545;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
- #modal-close-graph:active {
-   color: #ff0000;
- }
+#modal-close-graph:active {
+  background-color: #f5f5f5;
+  border-color: #bd2130;
+  color: #bd2130;
+  transform: scale(0.95);
+}
 
  .selected-subject {
    background-color: #28a745 !important;
