@@ -1,0 +1,65 @@
+{
+"update_url": "https://clients2.google.com/service/update2/crx",
+
+  "name": "Smartest Smartschool",
+  "short_name": "SS Tools",
+  "description": "Adds a grid and graph view to Smartschool grades.",
+  "version": "1.1",
+  "manifest_version": 3,
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "declarativeContent"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "icons": {
+    "16": "static/img/icon_16.png",
+    "48": "static/img/icon_48.png",
+    "128": "static/img/icon_128.png"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://*.smartschool.be/Grades*"],
+      "js": [
+        "static/js/jquery-3.4.1.min.js",
+        "Main/BetterGrades.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["https://*.smartschool.be/results*"],
+      "js": [
+        "static/js/jquery-3.4.1.min.js",
+        "static/js/chart.4.4.1.min.js",
+        "Main/BetterResults.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["https://*.smartschool.be/*"],
+      "js": [
+        "static/js/jquery-3.4.1.min.js",
+        "static/js/bootstrap.bundle.min.js",
+        "static/js/jquery.minicolors.min.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+
+"web_accessible_resources": [
+  {
+    "resources": [
+      "static/img/icon_128.png",
+      "static/img/grid_icon.png",
+      "static/img/graph_icon.png"
+    ],
+    "matches": ["https://*.smartschool.be/*"]
+  }
+]
+}
