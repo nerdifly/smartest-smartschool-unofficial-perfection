@@ -923,11 +923,6 @@ function MakeGraph() {
         }
       }
 
-       // Store previous chart data for animations
-       let previousChartData = null;
-       let previousLabels = null;
-       let chartInstance = null;
-
        // Function to load chart for selected periods and subject
        function loadChart() {
          if (selectedPeriods.size === 0 || !selectedSubject) return;
@@ -1037,8 +1032,7 @@ function MakeGraph() {
             yAxisTitle
           });
 
-          // Create animated chart
-          const chart = new Chart(ctx, {
+          new Chart(ctx, {
             type: "line",
             data: {
               labels,
@@ -1058,52 +1052,7 @@ function MakeGraph() {
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              animation: {
-                duration: 1500,
-                easing: 'easeInOutQuart',
-                // Animate line drawing
-                onProgress: function(animation) {
-                  // Custom line drawing animation
-                  const chart = animation.chart;
-                  const ctx = chart.ctx;
-                  const dataset = chart.data.datasets[0];
-                  const meta = chart.getDatasetMeta(0);
-
-                  if (meta.hidden) return;
-
-                  ctx.save();
-                  ctx.strokeStyle = dataset.borderColor;
-                  ctx.lineWidth = dataset.borderWidth || 2;
-                  ctx.lineCap = 'round';
-                  ctx.lineJoin = 'round';
-
-                  // Draw animated line
-                  const points = meta.data;
-                  if (points.length > 1) {
-                    const progress = animation.currentStep / animation.numSteps;
-
-                    ctx.beginPath();
-                    ctx.moveTo(points[0].x, points[0].y);
-
-                    for (let i = 1; i < points.length; i++) {
-                      const point = points[i];
-                      const prevPoint = points[i - 1];
-
-                      // Interpolate between points based on progress
-                      const currentProgress = Math.min(progress * points.length, i);
-                      const segmentProgress = Math.max(0, Math.min(1, currentProgress - (i - 1)));
-
-                      if (segmentProgress > 0) {
-                        const x = prevPoint.x + (point.x - prevPoint.x) * segmentProgress;
-                        const y = prevPoint.y + (point.y - prevPoint.y) * segmentProgress;
-                        ctx.lineTo(x, y);
-                      }
-                    }
-                    ctx.stroke();
-                  }
-                  ctx.restore();
-                }
-              },
+              
               scales: {
                 y: {
                   min: 0,
