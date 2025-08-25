@@ -63,6 +63,9 @@ new MutationObserver((mutations, obs) => {
       LoadGraph();
       addButtons();
 
+      // 4️⃣ Set up URL change detection
+      setupURLChangeDetection();
+
       console.log('[BetterResults] Extension initialized successfully');
 
       // Send message to background script
@@ -178,6 +181,64 @@ function createCustomContentArea() {
     toolbar.after(customContent);
   } else {
     smscMain.append(customContent);
+  }
+
+  // Add swipe gesture detection
+  setupSwipeGestures(customContent[0]);
+}
+
+// Set up swipe gesture detection for custom content area
+function setupSwipeGestures(element) {
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchEndX = 0;
+  let touchEndY = 0;
+
+  element.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  element.addEventListener('touchend', function(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleSwipeGesture();
+  }, { passive: true });
+
+  function handleSwipeGesture() {
+    if (!currentCustomTab) return; // Only handle if custom tab is open
+
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    const minSwipeDistance = 50; // Minimum distance for swipe detection
+    const maxVerticalMovement = 100; // Maximum vertical movement to consider it horizontal
+
+    // Check if it's a horizontal swipe (not vertical)
+    if (Math.abs(deltaY) < maxVerticalMovement && Math.abs(deltaX) > minSwipeDistance) {
+      console.log(`[BetterResults] Swipe detected: ${deltaX > 0 ? 'right' : 'left'} (${Math.abs(deltaX)}px)`);
+
+      // Close the custom tab
+      $(`#show-${currentCustomTab}`).removeClass("wide-toolbar__item--selected");
+      currentCustomTab = null;
+
+      // Hide custom content and show main content
+      $("#custom-content-area").hide();
+      $("#smscMain > div:not(.wide-toolbar):not(#custom-content-area)").show();
+
+      console.log('[BetterResults] Custom tab closed due to swipe gesture');
+
+      // Send message to background script
+      try {
+        chrome.runtime.sendMessage({
+          action: 'customTabClosed',
+          closedBy: 'swipeGesture',
+          direction: deltaX > 0 ? 'right' : 'left',
+          timestamp: Date.now()
+        });
+      } catch (e) {
+        console.log('[BetterResults] Could not send message to background script:', e.message);
+      }
+    }
   }
 }
 
@@ -362,6 +423,80 @@ function setupNormalButtonHooks() {
   } else {
     console.warn("[BetterResults] Toolbar container not found for button hooking!");
   }
+}
+
+// Set up URL change detection to close custom tabs when navigating
+function setupURLChangeDetection() {
+  console.log('[BetterResults] Setting up URL change detection...');
+
+  let currentURL = window.location.href;
+
+  // Method 1: Listen for popstate events (browser back/forward)
+  window.addEventListener('popstate', function() {
+    console.log('[BetterResults] popstate detected, checking for URL change');
+    checkURLChange();
+  });
+
+  // Method 2: Override history methods to detect programmatic navigation
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+
+  history.pushState = function(state, title, url) {
+    const result = originalPushState.apply(history, arguments);
+    console.log('[BetterResults] pushState detected, checking for URL change');
+    setTimeout(checkURLChange, 10); // Small delay to ensure URL has changed
+    return result;
+  };
+
+  history.replaceState = function(state, title, url) {
+    const result = originalReplaceState.apply(history, arguments);
+    console.log('[BetterResults] replaceState detected, checking for URL change');
+    setTimeout(checkURLChange, 10); // Small delay to ensure URL has changed
+    return result;
+  };
+
+  // Method 3: Periodic check as fallback
+  setInterval(() => {
+    if (window.location.href !== currentURL) {
+      console.log('[BetterResults] URL change detected via polling');
+      checkURLChange();
+    }
+  }, 500);
+
+  function checkURLChange() {
+    const newURL = window.location.href;
+
+    if (newURL !== currentURL && currentCustomTab) {
+      console.log(`[BetterResults] URL changed from ${currentURL} to ${newURL}, closing custom tab`);
+
+      // Close the custom tab
+      $(`#show-${currentCustomTab}`).removeClass("wide-toolbar__item--selected");
+      currentCustomTab = null;
+
+      // Hide custom content and show main content
+      $("#custom-content-area").hide();
+      $("#smscMain > div:not(.wide-toolbar):not(#custom-content-area)").show();
+
+      console.log('[BetterResults] Custom tab closed due to URL change');
+
+      // Send message to background script
+      try {
+        chrome.runtime.sendMessage({
+          action: 'customTabClosed',
+          closedBy: 'urlChange',
+          oldURL: currentURL,
+          newURL: newURL,
+          timestamp: Date.now()
+        });
+      } catch (e) {
+        console.log('[BetterResults] Could not send message to background script:', e.message);
+      }
+    }
+
+    currentURL = newURL;
+  }
+
+  console.log('[BetterResults] URL change detection setup complete');
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1876,35 +2011,54 @@ function MakeGraph() {
          maxWidth: "90vw"
        });
 
-        // Settings button - positioned next to the close button
+        // Settings button - positioned in top right of graph view
         const settingsButton = $("<button>")
           .attr("id", "graph-settings-button")
-          .text("⚙️")
+          .html("&#9881;") // Unicode gear symbol
           .css({
-            padding: "0.6rem",
-            backgroundColor: "#6c757d",
-            color: "white",
-            border: "none",
-            borderRadius: "50%",
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            width: "44px",
+            height: "44px",
+            borderRadius: "8px",
+            border: "1px solid #e0e0e0",
+            backgroundColor: "white",
+            color: "#666",
             cursor: "pointer",
-            width: "48px",
-            height: "48px",
-            fontSize: "1.2rem",
-            position: "absolute",
-            top: "0.5rem",
-            right: "5rem",
-            zIndex: 10,
+            fontSize: "18px",
+            zIndex: 1000,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            transition: "all 0.2s ease",
+            fontFamily: "Arial, sans-serif"
           })
-         .on("click", function(e) {
-           e.stopPropagation();
-           settingsModalBg.show();
-         })
-         .attr("title", "Graph Settings")
-         .attr("aria-label", "Open graph settings");
+          .hover(
+            function() {
+              $(this).css({
+                backgroundColor: "#f8f9fa",
+                color: "#333",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                transform: "scale(1.05)"
+              });
+            },
+            function() {
+              $(this).css({
+                backgroundColor: "white",
+                color: "#666",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                transform: "scale(1)"
+              });
+            }
+          )
+          .on("click", function(e) {
+            e.stopPropagation();
+            settingsModalBg.show();
+          })
+          .attr("title", "Graph Settings")
+          .attr("aria-label", "Open graph settings");
 
        // X-axis settings
        const xAxisLabel = $("<div>").text("X-Axis:").css("font-weight", "bold");
@@ -2731,21 +2885,22 @@ const GRAPH_CSS = `/* --- GENERAL --- */
     background-color: #218838 !important;
   }
 
-  /* Settings button - larger and better positioned */
-  #graph-settings-button {
-    transition: all 0.2s ease;
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)";
-  }
+   /* Settings button - modern floating design */
+   #graph-settings-button {
+     transition: all 0.2s ease;
+     backdropFilter: "blur(10px)";
+   }
 
-  #graph-settings-button:hover {
-    background-color: #5a6268 !important;
-    transform: scale(1.05);
-    boxShadow: "0 4px 12px rgba(0,0,0,0.2)";
-  }
+   #graph-settings-button:hover {
+     background-color: #f8f9fa !important;
+     color: #333 !important;
+     box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+     transform: scale(1.05) !important;
+   }
 
-  #graph-settings-button:active {
-    transform: scale(0.95);
-  }
+   #graph-settings-button:active {
+     transform: scale(0.95) !important;
+   }
 
   /* Settings modal styles */
   #graph-settings-modal-bg {
@@ -2796,13 +2951,31 @@ const GRAPH_CSS = `/* --- GENERAL --- */
     }
   }
 
-  /* Responsive modal */
-  @media (max-width: 768px) {
-    #graph-settings-modal {
-      minWidth: "280px";
-      padding: "1.2rem";
-      top: "45%";
-    }
+   /* Responsive modal */
+   @media (max-width: 768px) {
+     #graph-settings-modal {
+       minWidth: "280px";
+       padding: "1.2rem";
+       top: "45%";
+     }
+
+     #graph-settings-button {
+       width: "40px !important";
+       height: "40px !important";
+       fontSize: "16px !important";
+       bottom: "15px !important";
+       right: "15px !important";
+     }
+
+     #graph-settings-modal select {
+       font-size: 0.85rem;
+       padding: 0.35rem 0.55rem;
+     }
+
+     #graph-settings-modal div {
+       font-size: 0.85rem;
+     }
+   }
 
     #graph-settings-button {
       width: "44px";
