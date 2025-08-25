@@ -252,63 +252,68 @@ function MakeGrid() {
           let overallNum = 0;
           let overallDen = 0;
 
-          Object.entries(periodData).forEach(([courseName, results]) => {
-            const row = $("<tr>");
+           Object.entries(periodData).forEach(([courseName, results]) => {
+             const row = $("<tr>").addClass("course-row");
 
-            const icon = courseIcons[courseName];
-            row.append(
-              $("<th>").append(
-                icon && icon.type === "icon"
-                  ? $("<span>")
-                      .addClass(`icon-label icon-label--24 smsc-svg--${icon.value}--24`)
-                      .text(courseName)
-                  : courseName
-              )
-            );
+             const icon = courseIcons[courseName];
+             row.append(
+               $("<th>").addClass("course-name-cell").append(
+                 icon && icon.type === "icon"
+                   ? $("<span>")
+                       .addClass(`icon-label icon-label--24 smsc-svg--${icon.value}--24`)
+                       .text(courseName)
+                   : courseName
+               )
+             );
 
-            let num = 0;
-            let den = 0;
-            results.forEach(({ name, graphic }) => {
-              const { description: desc = "/", color } = graphic;
-              row.append(
-                $("<td>")
-                  .addClass(`c-${color}-combo--300`)
-                  .attr({ id: "details-grid", content: name })
-                  .text(desc)
-              );
+             let num = 0;
+             let den = 0;
+             results.forEach(({ name, graphic }, index) => {
+               const { description: desc = "/", color } = graphic;
+               const cell = $("<td>")
+                 .addClass(`c-${color}-combo--300 evaluation-cell`)
+                 .attr({ id: "details-grid", content: name })
+                 .text(desc);
 
-              const m = /^([\d,.]+)\/([\d,.]+)$/.exec(desc);
-              if (m) {
-                num += parseFloat(m[1].replace(",", "."));
-                den += parseFloat(m[2].replace(",", "."));
-              }
-            });
+               // Add visual grouping for multiple evaluations
+               if (results.length > 1) {
+                 cell.addClass("multi-evaluation");
+               }
 
-            for (let i = 0; i < maxLen - results.length; i++) row.append($("<td>"));
+               row.append(cell);
 
-            const totalCell = $("<td>").addClass("total-grid");
-            if (den) {
-              totalCell.text(ratioToPercent(num, den));
-              if (num / den < 0.5) totalCell.addClass("is-low-grid");
-            }
-            row.append(totalCell);
+               const m = /^([\d,.]+)\/([\d,.]+)$/.exec(desc);
+               if (m) {
+                 num += parseFloat(m[1].replace(",", "."));
+                 den += parseFloat(m[2].replace(",", "."));
+               }
+             });
 
-            overallNum += num;
-            overallDen += den;
-            table.append(row);
-          });
+             for (let i = 0; i < maxLen - results.length; i++) row.append($("<td>").addClass("empty-cell"));
 
-          const overallRow = $("<tr>");
-          overallRow.append($("<th>").text("Total"));
-          for (let i = 0; i < maxLen; i++) overallRow.append($("<td>"));
+             const totalCell = $("<td>").addClass("total-grid course-total");
+             if (den) {
+               totalCell.text(ratioToPercent(num, den));
+               if (num / den < 0.5) totalCell.addClass("is-low-grid");
+             }
+             row.append(totalCell);
 
-          const overallCell = $("<td>").addClass("total-grid");
-          if (overallDen) {
-            overallCell.text(ratioToPercent(overallNum, overallDen));
-            if (overallNum / overallDen < 0.5) overallCell.addClass("is-low-grid");
-          }
-          overallRow.append(overallCell);
-          table.append(overallRow);
+             overallNum += num;
+             overallDen += den;
+             table.append(row);
+           });
+
+           const overallRow = $("<tr>").addClass("overall-total-row");
+           overallRow.append($("<th>").addClass("overall-total-label").text("OVERALL TOTAL"));
+           for (let i = 0; i < maxLen; i++) overallRow.append($("<td>").addClass("overall-spacer"));
+
+           const overallCell = $("<td>").addClass("total-grid overall-total-value");
+           if (overallDen) {
+             overallCell.text(ratioToPercent(overallNum, overallDen));
+             if (overallNum / overallDen < 0.5) overallCell.addClass("is-low-grid");
+           }
+           overallRow.append(overallCell);
+           table.append(overallRow);
 
           periodGrids[periodName] = grid;
         });
@@ -325,138 +330,528 @@ function MakeGrid() {
       
       modal.append(filterContainer);
 
-       function updatePeriodButtons(grids) {
-         periodButtons.empty();
+        // Move selectedPeriods to outer scope so it can be accessed by createCombinedGrid
+        let selectedPeriods = new Set();
 
-         const periodSelection = $("<div>").attr("id", "period-selection-grid");
-         periodSelection.append(
-           $("<span>").text("Select periods: ").css("font-weight", "bold")
-         );
+        function updatePeriodButtons(grids) {
+          periodButtons.empty();
 
-         const periodCheckboxes = $("<div>").attr("id", "period-checkboxes-grid");
-         const selectedPeriods = new Set();
+          const periodLabel = $("<div>").text("Select Periods:").css({
+            "font-weight": "bold",
+            "margin-bottom": "0.5rem"
+          });
+          const periodButtonsContainer = $("<div>").attr("id", "period-buttons-grid").css({
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+            marginBottom: "1rem"
+          });
 
-         // Select All button
-         const selectAllBtn = $("<button>")
-           .attr("id", "select-all-periods-grid")
-           .text("Select All")
-           .addClass("period-control-button-grid");
+          Object.keys(grids).reverse().forEach(periodName => {
+            const button = $("<button>")
+              .addClass("period-button-grid")
+              .text(periodName)
+              .data("period", periodName)
+              .css({
+                padding: "0.5rem 1rem",
+                border: "2px solid #ddd",
+                borderRadius: "4px",
+                backgroundColor: "white",
+                cursor: "pointer",
+                transition: "all 0.2s ease"
+              })
+              .on("click", function() {
+                const $btn = $(this);
+                const period = $btn.data("period");
 
-         // Reset button
-         const resetBtn = $("<button>")
-           .attr("id", "reset-periods-grid")
-           .text("Reset")
-           .addClass("period-control-button-grid");
+                if (selectedPeriods.has(period)) {
+                  selectedPeriods.delete(period);
+                  $btn.css({
+                    backgroundColor: "white",
+                    borderColor: "#ddd",
+                    color: "black"
+                  });
+                } else {
+                  selectedPeriods.add(period);
+                  $btn.css({
+                    backgroundColor: "#007bff",
+                    borderColor: "#007bff",
+                    color: "white"
+                  });
+                }
+                loadCombinedGrid();
+              });
 
-         const periodControls = $("<div>").attr("id", "period-controls-grid");
-         periodControls.append(selectAllBtn, resetBtn);
+            periodButtonsContainer.append(button);
+          });
 
-         Object.entries(grids)
-           .reverse()
-           .forEach(([periodName, grid]) => {
-             const checkboxWrapper = $("<label>").addClass("period-checkbox-wrapper-grid");
-             const checkbox = $("<input>")
-               .attr({ type: "checkbox", value: periodName })
-               .addClass("period-checkbox-grid");
-             const label = $("<span>").text(periodName);
+          periodButtons.append(periodLabel, periodButtonsContainer);
 
-             checkboxWrapper.append(checkbox, label);
-             periodCheckboxes.append(checkboxWrapper);
-           });
+          function loadCombinedGrid() {
+            mainGrid.empty();
 
-         periodSelection.append(periodCheckboxes, periodControls);
-         periodButtons.append(periodSelection);
-
-         function loadMultipleGrids(selectedPeriodNames) {
-           mainGrid.empty();
-
-           if (selectedPeriodNames.length === 0) {
-             mainGrid.append($("<p>").text("Please select at least one period."));
-             return;
-           }
-
-           selectedPeriodNames.forEach(periodName => {
-             if (grids[periodName]) {
-               mainGrid.append(grids[periodName]);
-             }
-           });
-         }
-
-         function updateSelectedPeriods() {
-           const checkedBoxes = $('.period-checkbox-grid:checked');
-           const selectedPeriodNames = Array.from(checkedBoxes).map(cb => cb.value);
-           selectedPeriods.clear();
-           selectedPeriodNames.forEach(name => selectedPeriods.add(name));
-           loadMultipleGrids(selectedPeriodNames);
-         }
-
-         // Event handlers
-         $('.period-checkbox-grid').on('change', updateSelectedPeriods);
-
-         selectAllBtn.on('click', function() {
-           $('.period-checkbox-grid').prop('checked', true);
-           updateSelectedPeriods();
-         });
-
-         resetBtn.on('click', function() {
-           $('.period-checkbox-grid').prop('checked', false);
-           mainGrid.empty();
-           mainGrid.append($("<p>").text("Please select at least one period."));
-         });
+            // Create combined table with original grid design
+            const combinedTable = createCombinedGrid();
+            mainGrid.append(combinedTable);
+          }
 
          // Initialize with latest period selected
          if (latestPeriod && grids[latestPeriod]) {
-           $(`.period-checkbox-grid[value="${latestPeriod}"]`).prop('checked', true);
-           updateSelectedPeriods();
+           selectedPeriods.add(latestPeriod);
+           $(`.period-button-grid[data-period="${latestPeriod}"]`).css({
+             backgroundColor: "#007bff",
+             borderColor: "#007bff",
+             color: "white"
+           });
+           loadCombinedGrid();
          }
-       }
-      
-       updatePeriodButtons(periodGrids);
-       modal.append(periodButtons, mainGrid);
-      
-      applyFilterBtn.on("click", function() {
-        const filterDate = dateInput.val();
-        if (!filterDate) {
-          alert("Please select a date for filtering");
-          return;
         }
-        
-        const filterType = filterTypeSelect.val(); 
-        
-        const filteredResults = allResults.filter(res => {
-          if (filterType === "before") {
-            return res.date <= filterDate;
-          } else {
-            return res.date >= filterDate;
+      
+
+
+        function createCombinedGrid() {
+          if (selectedPeriods.size === 0) {
+            return $("<p>").text("Please select at least one period.");
           }
-        });
-        
-        if (filteredResults.length === 0) {
-          alert("No results found with the selected filter");
-          return;
+
+          const tableContainer = $("<div>").attr("id", "combined-table-container").css({
+            overflowX: "auto",
+            overflowY: "visible",
+            position: "relative",
+            maxWidth: "100%"
+          });
+
+          const table = $("<table>").attr("id", "combined-result-table");
+
+          // Create header row - just like original grid
+          const headerRow = $("<tr>");
+          headerRow.append($("<th>").text("Course").css({
+            position: "sticky",
+            left: 0,
+            backgroundColor: "#f8f9fa",
+            zIndex: 10,
+            minWidth: "200px",
+            textAlign: "left",
+            fontWeight: "bold"
+          }));
+
+          // Add evaluation columns - we need to find the maximum number of evaluations
+          let maxEvaluations = 0;
+          const allCourses = new Set();
+          const courseData = {};
+
+          selectedPeriods.forEach(periodName => {
+            if (data[periodName]) {
+              Object.keys(data[periodName]).forEach(courseName => {
+                allCourses.add(courseName);
+                if (!courseData[courseName]) {
+                  courseData[courseName] = [];
+                }
+                // Add all evaluations from this period to the course
+                courseData[courseName] = courseData[courseName].concat(data[periodName][courseName]);
+                maxEvaluations = Math.max(maxEvaluations, courseData[courseName].length);
+              });
+            }
+          });
+
+          // Add evaluation column headers
+          for (let i = 1; i <= maxEvaluations; i++) {
+            headerRow.append($("<th>").text("Eval " + i).css({
+              textAlign: "center",
+              backgroundColor: "#f8f9fa",
+              fontWeight: "bold",
+              minWidth: "100px"
+            }));
+          }
+
+          // Add total column
+          headerRow.append($("<th>").text("Total").css({
+            position: "sticky",
+            right: 0,
+            backgroundColor: "#f8f9fa",
+            zIndex: 10,
+            fontWeight: "bold",
+            minWidth: "80px",
+            textAlign: "center"
+          }));
+
+          table.append(headerRow);
+
+          // Create data rows for each course - just like original grid
+          Array.from(allCourses).sort().forEach(courseName => {
+            const row = $("<tr>").addClass("course-row");
+
+            // Course name cell
+            row.append($("<th>").text(courseName).css({
+              position: "sticky",
+              left: 0,
+              backgroundColor: "white",
+              zIndex: 5,
+              textAlign: "left",
+              fontWeight: "normal"
+            }));
+
+            let totalNum = 0;
+            let totalDen = 0;
+
+            // Sort evaluations by date (earliest first) and add evaluation cells
+            const evaluations = (courseData[courseName] || []).sort((a, b) => {
+              return new Date(a.date) - new Date(b.date);
+            });
+
+            evaluations.forEach((evaluation, index) => {
+              // Parse the score to get percentage for tooltip
+              const match = evaluation.graphic.description.match(/([\d,.]+)\/([\d,.]+)/);
+              let percentage = 0;
+              if (match) {
+                const num = parseFloat(match[1].replace(',', '.'));
+                const den = parseFloat(match[2].replace(',', '.'));
+                percentage = Math.round(num / den * 1000) / 10;
+                totalNum += num;
+                totalDen += den;
+              }
+
+              // Find which period this evaluation belongs to
+              let periodName = "Unknown Period";
+              selectedPeriods.forEach(p => {
+                if (data[p] && data[p][courseName]) {
+                  const found = data[p][courseName].find(e => e.date === evaluation.date && e.name === evaluation.name);
+                  if (found) {
+                    periodName = p;
+                  }
+                }
+              });
+
+              const evalCell = $("<td>")
+                .addClass(`c-${evaluation.graphic.color}-combo--300`)
+                .attr({
+                  id: "details-grid",
+                  'data-name': evaluation.name,
+                  'data-score': evaluation.graphic.description,
+                  'data-percentage': percentage,
+                  'data-period': periodName,
+                  'data-color': evaluation.graphic.color
+                })
+                .text(evaluation.graphic.description)
+                .css({
+                  textAlign: "center",
+                  padding: "4px 8px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  position: "relative"
+                });
+
+              evalCell.hover(
+                function() { showTooltip($(this)); },
+                function() { hideTooltip(); }
+              );
+
+              row.append(evalCell);
+            });
+
+            // Add empty cells if this course has fewer evaluations than the maximum
+            for (let i = evaluations.length; i < maxEvaluations; i++) {
+              row.append($("<td>").text(""));
+            }
+
+            // Add total cell - just like original grid
+            const totalCell = $("<td>").addClass("total-grid").css({
+              position: "sticky",
+              right: 0,
+              backgroundColor: "white",
+              zIndex: 5,
+              fontWeight: "bold",
+              textAlign: "center",
+              minWidth: "80px"
+            });
+
+            if (totalDen > 0) {
+              const percentage = Math.round(totalNum / totalDen * 1000) / 10;
+              totalCell.text(percentage + '%');
+              if (percentage < 50) {
+                totalCell.css('color', 'red');
+              }
+            } else {
+              totalCell.text("-");
+            }
+
+            row.append(totalCell);
+            table.append(row);
+          });
+
+          // Add overall total row - just like original grid
+          const overallRow = $("<tr>").addClass("overall-total-row");
+          overallRow.append($("<th>").text("OVERALL TOTAL").css({
+            position: "sticky",
+            left: 0,
+            backgroundColor: "#e3f2fd",
+            zIndex: 5,
+            textAlign: "left",
+            fontWeight: "bold"
+          }));
+
+          let overallNum = 0;
+          let overallDen = 0;
+
+          // Calculate overall totals across all courses and periods
+          Array.from(allCourses).forEach(courseName => {
+            const evaluations = courseData[courseName] || [];
+            evaluations.forEach(evaluation => {
+              const match = evaluation.graphic.description.match(/([\d,.]+)\/([\d,.]+)/);
+              if (match) {
+                overallNum += parseFloat(match[1].replace(',', '.'));
+                overallDen += parseFloat(match[2].replace(',', '.'));
+              }
+            });
+          });
+
+          // Add empty cells for each evaluation column
+          for (let i = 0; i < maxEvaluations; i++) {
+            overallRow.append($("<td>").text(""));
+          }
+
+          // Add overall total cell
+          const overallTotalCell = $("<td>").addClass("total-grid").css({
+            position: "sticky",
+            right: 0,
+            backgroundColor: "#e3f2fd",
+            zIndex: 5,
+            textAlign: "center",
+            fontSize: "1.2em",
+            fontWeight: "bold",
+            color: "#1976d2"
+          });
+
+          if (overallDen > 0) {
+            const percentage = Math.round(overallNum / overallDen * 1000) / 10;
+            overallTotalCell.text(percentage + '%');
+            if (percentage < 50) {
+              overallTotalCell.css('color', 'red');
+            }
+          } else {
+            overallTotalCell.text("-");
+          }
+
+          overallRow.append(overallTotalCell);
+          table.append(overallRow);
+
+          tableContainer.append(table);
+          return tableContainer;
         }
-        
-        const newPeriodGrids = buildGridWithFilter(filteredResults);
-        
-        updatePeriodButtons(newPeriodGrids);
-        
-         const firstPeriod = Object.keys(newPeriodGrids)[0];
-         if (firstPeriod) {
-           $('#period-container-grid').empty().append(newPeriodGrids[firstPeriod]);
+
+        // Tooltip functions for grid
+        function showTooltip($cell) {
+          const name = $cell.attr('data-name');
+          const score = $cell.attr('data-score');
+          const percentage = $cell.attr('data-percentage');
+          const period = $cell.attr('data-period');
+          const color = $cell.attr('data-color');
+
+          // Remove any existing tooltip
+          $('.grid-tooltip').remove();
+
+          // Create tooltip element — styling mirrors Chart.js tooltip used in the
+          // graph: semi-transparent evaluation color background, black text,
+          // small border, rounded corners and subtle shadow.
+          const raw = getTooltipColor(color);
+          const bgRgba = hexToRgba(raw, 0.5); // 50% opacity similar to chart
+          const arrowRgba = hexToRgba(raw, 0.9); // slightly more opaque for arrow
+          const textColor = getTooltipTextColor(color);
+
+          const tooltip = $('<div>')
+            .addClass('grid-tooltip')
+            .css({
+              position: 'absolute',
+              // set CSS variable so pseudo-element arrow can match the color
+              '--bg': arrowRgba,
+              color: textColor,
+              padding: '8px 10px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              zIndex: 10000,
+              pointerEvents: 'none',
+              whiteSpace: 'pre-line',
+              textAlign: 'left',
+              fontWeight: 'normal',
+              lineHeight: '1.2',
+              backgroundColor: bgRgba,
+              border: '1px solid rgba(0,0,0,0.12)',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+              opacity: 0,
+              transform: 'scale(0.9)',
+              transition: 'all 0.2s ease'
+            })
+            .text(`${name}\n${score} (${percentage}%) - ${period}`);
+
+          // Append first so outerWidth/outerHeight are correct, then position.
+          $('body').append(tooltip);
+
+          const cellOffset = $cell.offset();
+          const cellWidth = $cell.outerWidth();
+          const cellHeight = $cell.outerHeight();
+          const tipW = tooltip.outerWidth();
+          const tipH = tooltip.outerHeight();
+
+          // Smart positioning: prefer right, but switch to left if it would go off screen
+          const viewportW = $(window).width();
+          const viewportH = $(window).height();
+          let left = cellOffset.left + cellWidth + 4;
+          let arrowClass = 'arrow-right';
+
+          // Check if tooltip would go off the right edge of the screen
+          if (left + tipW > viewportW - 4) {
+            // Switch to left side
+            left = cellOffset.left - tipW - 4;
+            arrowClass = 'arrow-left';
+          }
+
+          // If left positioning would also go off screen, keep right positioning
+          if (left < 4) {
+            left = cellOffset.left + cellWidth + 4;
+            arrowClass = 'arrow-right';
+          }
+
+          let top = cellOffset.top + (cellHeight / 2) - (tipH / 2);
+
+          // Smart vertical positioning: keep tooltip within viewport bounds
+          const margin = 8;
+
+          // If tooltip would go above viewport, push it down
+          if (top < margin) {
+            top = margin;
+          }
+
+          // If tooltip would go below viewport, push it up
+          if (top + tipH > viewportH - margin) {
+            top = viewportH - tipH - margin;
+          }
+
+          tooltip.addClass(arrowClass).css({ left, top });
+
+          // Animate in
+          setTimeout(() => {
+            tooltip.css({
+              opacity: 1,
+              transform: 'scale(1)'
+            });
+          }, 10);
+        }
+
+        function hideTooltip() {
+          $('.grid-tooltip').fadeOut(150, function() {
+            $(this).remove();
+          });
+        }
+
+        function getTooltipColor(color) {
+          switch(color) {
+            case 'red': return '#ff0000';
+            case 'yellow': return '#ffd531';
+            case 'green': return '#3bd63d';
+            case 'olive': return '#2b8114';
+            default: return '#1a1a1a';
+          }
+        }
+
+        function getTooltipTextColor(color) {
+          // Chart tooltip uses black for body/title; prefer black text for
+          // light backgrounds, white for darker ones.
+          switch(color) {
+            case 'red': return '#ffffff';
+            case 'yellow': return '#000000';
+            case 'lightgreen': return '#000000';
+            case 'darkgreen': return '#ffffff';
+            default: return '#000000';
+          }
+        }
+
+          // Convert a hex color (#RRGGBB or #RGB) to rgba(...) string with given
+          // alpha (0..1). This is more compatible than 8-digit hex in CSS.
+          function hexToRgba(hex, alpha = 0.5) {
+            if (!hex) return `rgba(26,26,26,${alpha})`;
+            // Strip leading #
+            hex = hex.replace('#','');
+            if (hex.length === 3) {
+              hex = hex.split('').map(c => c + c).join('');
+            }
+            const int = parseInt(hex, 16);
+            const r = (int >> 16) & 255;
+            const g = (int >> 8) & 255;
+            const b = int & 255;
+            return `rgba(${r},${g},${b},${alpha})`;
+          }
+
+        updatePeriodButtons(periodGrids);
+        modal.append(periodButtons, mainGrid);
+      
+       applyFilterBtn.on("click", function() {
+         const filterDate = dateInput.val();
+         if (!filterDate) {
+           alert("Please select a date for filtering");
+           return;
+         }
+
+         const filterType = filterTypeSelect.val();
+
+         const filteredResults = allResults.filter(res => {
+           if (filterType === "before") {
+             return res.date <= filterDate;
+           } else {
+             return res.date >= filterDate;
+           }
+         });
+
+         if (filteredResults.length === 0) {
+           alert("No results found with the selected filter");
+           return;
+         }
+
+         const newPeriodGrids = buildGridWithFilter(filteredResults);
+
+         updatePeriodButtons(newPeriodGrids);
+
+         // After filtering, select the latest available period by default
+         const availablePeriods = Object.keys(newPeriodGrids);
+         if (availablePeriods.length > 0) {
+           const latestPeriod = availablePeriods[availablePeriods.length - 1];
+           // Clear all selections first
+           $('.period-button-grid').css({
+             backgroundColor: "white",
+             borderColor: "#ddd",
+             color: "black"
+           });
+           // Select the latest period
+           $(`.period-button-grid[data-period="${latestPeriod}"]`).css({
+             backgroundColor: "#007bff",
+             borderColor: "#007bff",
+             color: "white"
+           }).trigger('click');
          } else {
            $('#period-container-grid').empty().append($("<p>").text("No results match your filter criteria"));
          }
-      });
+       });
       
-      clearFilterBtn.on("click", function() {
-        dateInput.val("");
-        
-        updatePeriodButtons(periodGrids);
-        
+       clearFilterBtn.on("click", function() {
+         dateInput.val("");
+
+         updatePeriodButtons(periodGrids);
+
+         // Restore the latest period selection after clearing filter
          if (latestPeriod && periodGrids[latestPeriod]) {
-           $('#period-container-grid').empty().append(periodGrids[latestPeriod]);
+           // Clear all selections first
+           $('.period-button-grid').css({
+             backgroundColor: "white",
+             borderColor: "#ddd",
+             color: "black"
+           });
+           // Select the latest period
+           $(`.period-button-grid[data-period="${latestPeriod}"]`).css({
+             backgroundColor: "#007bff",
+             borderColor: "#007bff",
+             color: "white"
+           }).trigger('click');
          }
-      });
+       });
 
        loading.replaceWith(modal);
 
@@ -1190,27 +1585,13 @@ const GRID_CSS = `#result-table-grid #disclamer-grid {
   position: relative;
 }
 
-#details-grid:hover::before {
-  visibility: visible;
-  opacity: 0.9;
-}
-
+/* Disable the legacy CSS pseudo-element tooltip for #details-grid. We now
+   use a JS-inserted .grid-tooltip element so remove the ::before/::after
+   behaviour to avoid duplicate tooltips and the connecting triangle/line. */
+#details-grid:hover::before,
 #details-grid::before {
-  z-index: 2;
-  content: attr(content);
-  color: white;
-  background-color: #1a1a1a;
-  visibility: hidden;
-  position: absolute;
-  text-align: center;
-  padding: 0.313rem 0;
-  border-radius: 0.375rem;
-  opacity: 0;
-  transition: opacity .6s;
-  width: 15rem;
-  top: 100%;
-  left: 50%;
-  margin-left: -7.5rem;
+  display: none !important;
+  content: none !important;
 }
 
 #result-table-grid .hidden-cell-grid {
@@ -1218,22 +1599,27 @@ const GRID_CSS = `#result-table-grid #disclamer-grid {
 }
 
 .period_button-grid {
-  background-color: #ff520e;
-  border-radius: 3px;
-  border-style: none;
+  background-color: #007bff;
+  border: 2px solid #ddd;
+  border-radius: 4px;
   color: #FFFFFF;
   margin-right: 0.5rem;
-  padding: 0.4rem;
+  padding: 0.5rem 1rem;
   text-align: center;
-  transition: 100ms;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .period_button-grid:hover {
-  background-color: #ef4200;
+  background-color: #0056b3;
+  border-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .period_button-grid:active {
-  background-color: #ff6210;
+  background-color: #004085;
+  transform: translateY(0);
 }
 
 .total-grid {
@@ -1282,7 +1668,7 @@ const GRID_CSS = `#result-table-grid #disclamer-grid {
 
 #result-table-grid th,
 #result-table-grid td {
-  border: 1px solid gray !important;
+  border: 1px solid #dee2e6 !important;
   padding: 0.5rem;
   min-width: 5.5rem;
 }
@@ -1294,8 +1680,7 @@ const GRID_CSS = `#result-table-grid #disclamer-grid {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: white;
-  opacity: .50;
+  background-color: rgba(0,0,0,0.5);
   z-index: 1000;
 }
 
@@ -1304,7 +1689,7 @@ const GRID_CSS = `#result-table-grid #disclamer-grid {
   border-radius: 10px;
   box-shadow: 0 0 20px 0 #222;
   display: none;
-  padding: 10px;
+  padding: 20px;
   position: fixed;
   z-index: 1000;
   left: 10%;
@@ -1321,21 +1706,39 @@ const GRID_CSS = `#result-table-grid #disclamer-grid {
 #modal-close-grid {
   font-family: 'Poppins', sans-serif;
   color: rgb(100, 100, 100);
-  padding: 0.4rem;
+  padding: 0.6rem;
   text-align: center;
-  transition: 100ms;
+  transition: all 200ms ease;
   position: absolute;
   right: 0.5rem;
-  background: none;
-  border: none;
+  top: 0.5rem;
+  background: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.4rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 #modal-close-grid:hover {
-  color: #dd0000;
+  background-color: #f8f9fa;
+  border-color: #dc3545;
+  color: #dc3545;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 #modal-close-grid:active {
-  color: #ff0000;
+  background-color: #f5f5f5;
+  border-color: #bd2130;
+  color: #bd2130;
+  transform: scale(0.95);
 }`;
 
 
@@ -1343,44 +1746,60 @@ const FILTER_CSS = `
 #filter-container-grid {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  padding: 10px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
 }
 
 #date-filter-input {
-  padding: 5px;
-  border: 1px solid #ccc;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
   border-radius: 4px;
+  font-size: 0.9rem;
 }
 
 #filter-type-select {
-  padding: 5px;
-  border: 1px solid #ccc;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
   border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
 }
 
 #apply-filter-btn, #clear-filter-btn {
-  padding: 5px 10px;
-  background-color: #4CAF50;
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
   color: white;
-  border: none;
+  border: 2px solid #28a745;
   border-radius: 4px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 #clear-filter-btn {
-  background-color: #f44336;
+  background-color: #dc3545;
+  border-color: #dc3545;
 }
 
 #apply-filter-btn:hover {
-  background-color: #45a049;
+  background-color: #218838;
+  border-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 #clear-filter-btn:hover {
-  background-color: #d32f2f;
+  background-color: #c82333;
+  border-color: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#apply-filter-btn:active, #clear-filter-btn:active {
+  transform: translateY(0);
 }
 
 /* --- PERIOD SELECTION FOR GRID --- */
@@ -1415,37 +1834,221 @@ const FILTER_CSS = `
 
 .period-control-button-grid {
   background-color: #28a745;
-  border: none;
+  border: 2px solid #28a745;
   color: white;
-  padding: 0.4rem 0.8rem;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 .period-control-button-grid:hover {
   background-color: #218838;
+  border-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.period-control-button-grid:active {
+  transform: translateY(0);
 }
 
 #reset-periods-grid {
   background-color: #dc3545;
+  border-color: #dc3545;
 }
 
 #reset-periods-grid:hover {
   background-color: #c82333;
+  border-color: #c82333;
 }
 
-@media (max-width: 768px) {
-  #filter-container-grid {
-    flex-direction: column;
-    align-items: flex-start;
+   /* Original grid design - combined into one table */
+   #combined-table-container {
+     overflow-x: auto;
+     overflow-y: visible;
+     position: relative;
+     border: 1px solid #dee2e6;
+     border-radius: 4px;
+     max-width: 100%;
+   }
+
+   #combined-result-table {
+     border-collapse: collapse;
+     width: 100%;
+     min-width: 800px;
+     font-size: 0.9rem;
+   }
+
+   #combined-result-table th,
+   #combined-result-table td {
+     border: 1px solid #dee2e6;
+     padding: 0.5rem;
+     text-align: center;
+   }
+
+   #combined-result-table th {
+     background-color: #f8f9fa;
+     font-weight: bold;
+   }
+
+   .course-row {
+     border-bottom: 1px solid #dee2e6;
+     transition: background-color 0.2s ease;
+   }
+
+   .course-row:hover {
+     background-color: #f8f9fa;
+   }
+
+   .course-row:nth-child(even) {
+     background-color: #fafbfc;
+   }
+
+   /* Sticky columns - just like original grid */
+   #combined-result-table th:first-child,
+   #combined-result-table td:first-child {
+     position: sticky;
+     left: 0;
+     background-color: white;
+     z-index: 10;
+     text-align: left;
+     font-weight: normal;
+   }
+
+   #combined-result-table th:last-child,
+   #combined-result-table td:last-child {
+     position: sticky;
+     right: 0;
+     background-color: white;
+     z-index: 10;
+     font-weight: bold;
+   }
+
+   /* Original grid evaluation cell styling */
+   #combined-result-table td[id="details-grid"] {
+     cursor: pointer;
+     padding: 4px 8px;
+     position: relative;
+   }
+
+  /* JavaScript tooltip styles — inline JS creates the tooltip element (.
+    grid-tooltip). Remove the old ::before/::after arrows and instead style
+    the floating element so it matches the graph tooltip (rounded, green,
+    subtle shadow). The JS still sets the exact background/text colours. */
+  .grid-tooltip {
+    position: absolute !important;
+    z-index: 10000 !important;
+    pointer-events: none !important;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #000 !important;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+    /* Use CSS variable --bg so the pseudo-element arrow can match the
+       dynamically-set background color. Fallback to a translucent light
+       green if the variable isn't set. */
+    background-color: var(--bg, rgba(59,214,61,0.9));
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    white-space: pre-line;
+    text-align: left;
+    line-height: 1.2;
   }
 
-  #period-checkboxes-grid {
-    flex-direction: column;
+  /* Arrow that points to the cell. We position it on the left or right
+     depending on where the tooltip is placed. The arrow color uses the
+     same background via the --bg CSS variable. */
+  .grid-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    pointer-events: none;
   }
-}
-`;
+
+  .grid-tooltip.arrow-right::after {
+    left: -8px;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid var(--bg, rgba(59,214,61,0.9));
+  }
+
+  .grid-tooltip.arrow-left::after {
+    right: -8px;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-left: 8px solid var(--bg, rgba(59,214,61,0.9));
+  }
+
+   /* Total column styling */
+   .total-grid {
+     font-weight: bold;
+   }
+
+   /* Overall total row */
+   .overall-total-row {
+     background-color: #e3f2fd !important;
+     border-top: 3px solid #2196f3 !important;
+     border-bottom: 2px solid #2196f3 !important;
+   }
+
+   .overall-total-row th {
+     background-color: #e3f2fd !important;
+     font-weight: bold !important;
+     font-size: 1.1em !important;
+     color: #1976d2 !important;
+   }
+
+   .overall-total-row td:last-child {
+     background-color: #fff !important;
+     border: 2px solid #2196f3 !important;
+     font-size: 1.2em !important;
+     color: #1976d2 !important;
+   }
+
+   /* Period buttons styling */
+   .period-button-grid {
+     transition: all 0.2s ease;
+   }
+
+   .period-button-grid:hover {
+     transform: translateY(-1px);
+     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+   }
+
+   .period-button-grid:active {
+     transform: translateY(0);
+   }
+
+   /* Responsive design */
+   @media (max-width: 768px) {
+     #filter-container-grid {
+       flex-direction: column;
+       align-items: flex-start;
+     }
+
+     #period-buttons-grid {
+       flex-direction: column;
+     }
+
+     .period-button-grid {
+       width: 100%;
+       margin-bottom: 0.25rem;
+     }
+
+     #combined-result-table {
+       font-size: 0.8rem;
+     }
+
+     #combined-result-table th,
+     #combined-result-table td {
+       padding: 0.25rem;
+     }
+   }
+ `;
 
 
 
