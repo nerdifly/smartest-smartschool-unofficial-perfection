@@ -58,10 +58,11 @@ new MutationObserver((mutations, obs) => {
       // 2️⃣ Create content area for custom tabs
       createCustomContentArea();
 
-      // 3️⃣ Prepare our UI assets
-      LoadGrid();
-      LoadGraph();
-      addButtons();
+       // 3️⃣ Prepare our UI assets
+       LoadGrid();
+       LoadGraph();
+       addButtons();
+       addCourseIconStyles();
 
       // 4️⃣ Set up URL change detection
       setupURLChangeDetection();
@@ -113,6 +114,39 @@ function injectStyles(css, idSuffix) {
   } else {
     console.log(`[BetterResults] Style element ${id} already exists, skipping injection`);
   }
+}
+
+/** Add CSS styles for course icons */
+function addCourseIconStyles() {
+  const iconStyles = `
+    .course-icon-container {
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    .course-icon {
+      flex-shrink: 0;
+      display: inline-block;
+    }
+
+    .course-name-cell {
+      min-width: 200px;
+    }
+
+    .course-icon-container span {
+      vertical-align: middle;
+    }
+
+    /* Ensure table cells can accommodate icons */
+    #result-table-grid th.course-name-cell,
+    #combined-result-table th {
+      padding: 8px;
+      text-align: left;
+    }
+  `;
+
+  injectStyles(iconStyles, "course-icons");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -625,16 +659,39 @@ function MakeGrid() {
            Object.entries(periodData).forEach(([courseName, results]) => {
              const row = $("<tr>").addClass("course-row");
 
-             const icon = courseIcons[courseName];
-             row.append(
-               $("<th>").addClass("course-name-cell").append(
-                 icon && icon.type === "icon"
-                   ? $("<span>")
-                       .addClass(`icon-label icon-label--24 smsc-svg--${icon.value}--24`)
-                       .text(courseName)
-                   : courseName
-               )
-             );
+              const icon = courseIcons[courseName];
+              const courseNameCell = $("<th>").addClass("course-name-cell");
+
+              if (icon && icon.type === "icon" && icon.value) {
+                // Create container for icon and text
+                const iconContainer = $("<div>").addClass("course-icon-container");
+
+                // Load SVG icon directly from the URL
+                const iconImg = $("<img>")
+                  .attr("src", `https://static2.smart-school.net/smsc/svg/${icon.value}/${icon.value}_24x24.svg`)
+                  .attr("alt", `${courseName} icon`)
+                  .addClass("course-icon")
+                  .css({
+                    width: "24px",
+                    height: "24px",
+                    marginRight: "8px",
+                    verticalAlign: "middle"
+                  })
+                  .on("error", function() {
+                    // If SVG fails to load, hide the image
+                    $(this).hide();
+                  });
+
+                // Add icon and course name
+                iconContainer.append(iconImg);
+                iconContainer.append($("<span>").text(courseName));
+                courseNameCell.append(iconContainer);
+              } else {
+                // No icon available, just show course name
+                courseNameCell.text(courseName);
+              }
+
+              row.append(courseNameCell);
 
              let num = 0;
              let den = 0;
@@ -920,15 +977,47 @@ function MakeGrid() {
           Array.from(allCourses).sort().forEach(courseName => {
             const row = $("<tr>").addClass("course-row");
 
-            // Course name cell
-            row.append($("<th>").text(courseName).css({
+            // Course name cell with icon
+            const courseNameCell = $("<th>").css({
               position: "sticky",
               left: 0,
               backgroundColor: "white",
               zIndex: 5,
               textAlign: "left",
               fontWeight: "normal"
-            }));
+            });
+
+            const icon = courseIcons[courseName];
+            if (icon && icon.type === "icon" && icon.value) {
+              // Create container for icon and text
+              const iconContainer = $("<div>").addClass("course-icon-container");
+
+              // Load SVG icon directly from the URL
+              const iconImg = $("<img>")
+                .attr("src", `https://static2.smart-school.net/smsc/svg/${icon.value}/${icon.value}_24x24.svg`)
+                .attr("alt", `${courseName} icon`)
+                .addClass("course-icon")
+                .css({
+                  width: "24px",
+                  height: "24px",
+                  marginRight: "8px",
+                  verticalAlign: "middle"
+                })
+                .on("error", function() {
+                  // If SVG fails to load, hide the image
+                  $(this).hide();
+                });
+
+              // Add icon and course name
+              iconContainer.append(iconImg);
+              iconContainer.append($("<span>").text(courseName));
+              courseNameCell.append(iconContainer);
+            } else {
+              // No icon available, just show course name
+              courseNameCell.text(courseName);
+            }
+
+            row.append(courseNameCell);
 
             let totalNum = 0;
             let totalDen = 0;
