@@ -723,14 +723,38 @@ function MakeGrid() {
                .text(periodName)
                .attr("data-period", periodName)
                .data("period", periodName)
-              .css({
-                padding: "0.5rem 1rem",
-                border: "2px solid #ddd",
-                borderRadius: "4px",
-                backgroundColor: "white",
-                cursor: "pointer",
-                transition: "all 0.2s ease"
-              })
+               .css({
+                 padding: "0.5rem 1rem",
+                 border: "2px solid #ddd",
+                 borderRadius: "4px",
+                 backgroundColor: "white",
+                 cursor: "pointer",
+                 transition: "all 0.2s ease"
+               })
+               .hover(
+                 function() {
+                   // Only apply hover effect if button is not currently selected
+                   if ($(this).css('backgroundColor') !== 'rgb(0, 123, 255)' &&
+                       !$(this).hasClass('period-button-initial-selected')) {
+                     $(this).css({
+                       backgroundColor: "#e7f3ff",
+                       borderColor: "#007bff",
+                       color: "#004085"
+                     });
+                   }
+                 },
+                 function() {
+                   // Only apply default styling if button is not currently selected
+                   if ($(this).css('backgroundColor') !== 'rgb(0, 123, 255)' &&
+                       !$(this).hasClass('period-button-initial-selected')) {
+                     $(this).css({
+                       backgroundColor: "white",
+                       borderColor: "#ddd",
+                       color: "black"
+                     });
+                   }
+                 }
+               )
                .on("click", function() {
                  const $btn = $(this);
                  const period = $btn.data("period");
@@ -2025,13 +2049,38 @@ function MakeGraph() {
            .text(periodName)
            .attr("data-period", periodName)
            .data("period", periodName)
-          .css({
-            padding: "0.5rem 1rem",
-            border: "2px solid #ddd",
-            borderRadius: "4px",
-            backgroundColor: "white",
-            cursor: "pointer"
-          })
+           .css({
+             padding: "0.5rem 1rem",
+             border: "2px solid #ddd",
+             borderRadius: "4px",
+             backgroundColor: "white",
+             cursor: "pointer",
+             transition: "all 0.2s ease"
+           })
+           .hover(
+             function() {
+               // Only apply hover effect if button is not currently selected
+               if ($(this).css('backgroundColor') !== 'rgb(0, 123, 255)' &&
+                   !$(this).hasClass('period-button-initial-selected')) {
+                 $(this).css({
+                   backgroundColor: "#e7f3ff",
+                   borderColor: "#007bff",
+                   color: "#004085"
+                 });
+               }
+             },
+             function() {
+               // Only apply default styling if button is not currently selected
+               if ($(this).css('backgroundColor') !== 'rgb(0, 123, 255)' &&
+                   !$(this).hasClass('period-button-initial-selected')) {
+                 $(this).css({
+                   backgroundColor: "white",
+                   borderColor: "#ddd",
+                   color: "black"
+                 });
+               }
+             }
+           )
            .on("click", function() {
              const $btn = $(this);
              const period = $btn.data("period");
@@ -2343,32 +2392,57 @@ function MakeGraph() {
             .addClass("subject-button-graph")
             .text(subjectName)
             .data("subject", subjectName)
-            .css({
-              padding: "0.5rem 1rem",
-              border: "2px solid #ddd",
-              borderRadius: "4px",
-              backgroundColor: isSelected ? "#28a745" : "white",
-              borderColor: isSelected ? "#28a745" : "#ddd",
-              color: isSelected ? "white" : "black",
-              cursor: "pointer"
-            })
+             .attr('data-selected', isSelected ? 'true' : 'false')
+             .css({
+               padding: "0.5rem 1rem",
+               border: "2px solid #ddd",
+               borderRadius: "4px",
+               backgroundColor: isSelected ? "#28a745" : "white",
+               color: isSelected ? "white" : "black",
+               cursor: "pointer",
+               transition: "all 0.2s ease"
+             })
+             .hover(
+               function() {
+                 // Only apply hover effect if button is not selected
+                 if ($(this).attr('data-selected') !== 'true') {
+                   $(this).css({
+                     backgroundColor: "#f8fff9",
+                     borderColor: "#28a745",
+                     color: "#2d5a3d"
+                   });
+                 }
+               },
+               function() {
+                 // Only apply default styling if button is not selected
+                 if ($(this).attr('data-selected') !== 'true') {
+                   $(this).css({
+                     backgroundColor: "white",
+                     borderColor: "#ddd",
+                     color: "black"
+                   });
+                 }
+               }
+             )
             .on("click", function() {
               const $btn = $(this);
               const subject = $btn.data("subject");
 
-              // Remove selection from other buttons
-              $('.subject-button-graph').css({
-                backgroundColor: "white",
-                borderColor: "#ddd",
-                color: "black"
-              });
+               // Remove selection from other buttons
+               $('.subject-button-graph').each(function() {
+                 $(this).attr('data-selected', 'false').css({
+                   backgroundColor: "white",
+                   borderColor: "#ddd",
+                   color: "black"
+                 });
+               });
 
-              // Select this button
-              $btn.css({
-                backgroundColor: "#007bff",
-                borderColor: "#007bff",
-                color: "white"
-              });
+               // Select this button with good green color
+               $btn.attr('data-selected', 'true').css({
+                 backgroundColor: "#28a745",
+                 borderColor: "#28a745",
+                 color: "white"
+               });
 
               selectedSubject = subject;
               loadChart();
@@ -2381,12 +2455,12 @@ function MakeGraph() {
         if (currentSubjectStillAvailable) {
           // Current subject is already visually selected during button creation
           loadChart(); // Refresh the chart with current subject
-        } else if (allSubjects.size > 0) {
-          // Current subject not available, select first available subject
-          const firstSubject = Array.from(allSubjects)[0];
-          selectedSubject = firstSubject;
-          loadChart();
-        } else {
+         } else if (allSubjects.size > 0) {
+           // Don't auto-select subject, show message to user
+           selectedSubject = null;
+           chartContainer.html("<p style='text-align: center; padding: 2rem; color: #666; font-style: italic;'>Please select a subject to start viewing the chart</p>");
+           chartTitle.text("");
+         } else {
           // No subjects available
           selectedSubject = null;
           chartContainer.html("<p>No subjects available for selected periods</p>");
@@ -2626,7 +2700,12 @@ function MakeGraph() {
          updateSubjectsAndChart();
        }
 
-       modal.append(settingsButton, periodLabel, periodButtons, subjectLabel, subjectButtons, chartTitle, chartContainer);
+        modal.append(settingsButton, periodLabel, periodButtons, subjectLabel, subjectButtons, chartTitle, chartContainer);
+
+        // Initialize with no subject selected and show message
+        selectedSubject = null;
+        chartContainer.html("<p style='text-align: center; padding: 2rem; color: #666; font-style: italic;'>Please select a subject to start viewing the chart</p>");
+        chartTitle.text("");
 
        // Add modal to body
        $("body").append(settingsModalBg);
