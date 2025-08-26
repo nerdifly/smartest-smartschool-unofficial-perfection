@@ -511,35 +511,35 @@ function MakeGrid() {
     .text("🔍 Show Date Filter")
     .addClass("period_button-grid");
   
-  const filterContainer = $("<div>")
-    .attr("id", "filter-container-grid")
-    
-  const dateInput = $("<input>").attr({
-    type: "date", 
-    id: "date-filter-input"
-  });
-  
-  const filterTypeSelect = $("<select>").attr("id", "filter-type-select");
-  filterTypeSelect.append($("<option>").attr("value", "before").text("Before"));
-  filterTypeSelect.append($("<option>").attr("value", "after").text("After"));
-  
-  const applyFilterBtn = $("<button>")
-    .attr("id", "apply-filter-btn")
-    .text("Apply Filter")
-    .addClass("period_button-grid");
-  
-  const clearFilterBtn = $("<button>")
-    .attr("id", "clear-filter-btn")
-    .text("Clear Filter")
-    .addClass("period_button-grid");
-  
-  filterContainer.append(
-    $("<span>").text("Filter results: "),
-    filterTypeSelect,
-    dateInput,
-    applyFilterBtn,
-    clearFilterBtn
-  );
+       const filterContainer = $("<div>")
+     .attr("id", "filter-container-grid")
+
+   const dateInput = $("<input>").attr({
+     type: "date",
+     id: "date-filter-input"
+   });
+
+   const filterTypeSelect = $("<select>").attr("id", "filter-type-select");
+   filterTypeSelect.append($("<option>").attr("value", "before").text("Before"));
+   filterTypeSelect.append($("<option>").attr("value", "after").text("After"));
+
+   const applyFilterBtn = $("<button>")
+     .attr("id", "apply-filter-btn")
+     .text("Apply Filter")
+     .addClass("period_button-grid");
+
+   const clearFilterBtn = $("<button>")
+     .attr("id", "clear-filter-btn")
+     .text("Clear Filter")
+     .addClass("period_button-grid");
+
+   filterContainer.append(
+     $("<span>").text("Filter results: "),
+     filterTypeSelect,
+     dateInput,
+     applyFilterBtn,
+     clearFilterBtn
+   );
 
   fetch("/results/api/v1/evaluations?itemsOnPage=500")
     .then((r) => r.json())
@@ -1220,8 +1220,910 @@ function MakeGrid() {
             return `rgba(${r},${g},${b},${alpha})`;
           }
 
-        updatePeriodButtons(periodGrids);
-        modal.append(periodButtons, mainGrid);
+         updatePeriodButtons(periodGrids);
+
+         // Store export functions globally for access from buttons
+         window.extractGridData = function() {
+           console.log("[BetterResults] Extracting detailed grid data for export...");
+
+           // Try multiple table selectors in case the table structure is different
+           let table = $("#combined-result-table");
+           if (table.length === 0) {
+             console.log("[BetterResults] combined-result-table not found, trying result-table-grid");
+             table = $("#result-table-grid");
+           }
+           if (table.length === 0) {
+             console.log("[BetterResults] No tables found with expected IDs");
+             console.log("[BetterResults] Available tables:", $('table').length);
+             $('table').each(function(i) {
+               console.log(`[BetterResults] Table ${i} ID:`, $(this).attr('id'));
+             });
+             alert("No grid data found to export. Please ensure the grid is loaded and try again.");
+             return null;
+           }
+
+           console.log("[BetterResults] Found table:", table.attr('id'));
+           console.log("[BetterResults] Table rows:", table.find("tr").length);
+
+           const tableData = [];
+           const headers = [];
+
+           // Extract headers - try different approaches
+           let headerRow = table.find("thead tr:first");
+           if (headerRow.length === 0) {
+             headerRow = table.find("tbody tr:first");
+           }
+
+           headerRow.find("th, td").each(function() {
+             headers.push($(this).text().trim());
+           });
+
+           console.log("[BetterResults] Extracted headers:", headers);
+
+           // Extract data rows (skip header row if it's in tbody)
+           let dataRows = table.find("tbody tr");
+           if (dataRows.length === 0) {
+             dataRows = table.find("tr");
+             dataRows = dataRows.slice(1); // Skip first row if it's headers
+           }
+
+           console.log("[BetterResults] Processing data rows:", dataRows.length);
+
+           dataRows.each(function(index) {
+             const row = [];
+             $(this).find("th, td").each(function() {
+               row.push($(this).text().trim());
+             });
+             if (row.length > 0 && row.some(cell => cell !== "")) {
+               tableData.push(row);
+             }
+           });
+
+           console.log("[BetterResults] Extracted data rows:", tableData.length);
+           console.log("[BetterResults] Sample data:", tableData.slice(0, 3));
+
+           if (tableData.length === 0) {
+             alert("No data rows found in the grid. The table might be empty.");
+             return null;
+           }
+
+           return { headers, data: tableData };
+         };
+
+         // Enhanced CSV export with detailed test information and selection popup
+         window.exportToCsvDetailed = function() {
+           console.log("[BetterResults] Starting detailed CSV export...");
+
+           // Show popup immediately with loading state
+           showExportSelectionPopup(null, null, true);
+
+           // Get the current period and course data from the API response
+           fetch("/results/api/v1/evaluations?itemsOnPage=500")
+             .then((r) => r.json())
+             .then((results) => {
+               console.log("[BetterResults] Fetched evaluation data:", results.length, "results");
+
+               // Structure: { [period]: { [course]: result[] } }
+               const data = {};
+               const courseIcons = {};
+               let latestPeriod = null;
+
+               // Parse Smartschool API payload
+               results.forEach((res) => {
+                 if (res.type !== "normal") return;
+
+                 const period = res.period.name;
+                 latestPeriod ??= period;
+                 data[period] ??= {};
+
+                 res.courses.forEach((course) => {
+                   const name = course.name;
+                   data[period][name] ??= [];
+                   data[period][name].push({
+                     date: res.date,
+                     name: res.name,
+                     graphic: res.graphic,
+                     period: period,
+                     course: name
+                   });
+                   courseIcons[name] = course.graphic;
+                 });
+               });
+
+               // Update popup with loaded data
+               updateExportSelectionPopup(data, latestPeriod);
+             })
+             .catch((error) => {
+               console.error("[BetterResults] Error fetching detailed data:", error);
+               alert("Error loading detailed data: " + error.message);
+               // Remove loading popup
+               $("#export-selection-overlay").remove();
+             });
+         };
+
+         // Function to show export selection popup
+         function showExportSelectionPopup(data, latestPeriod, isLoading = false) {
+           // Create popup overlay
+           const overlay = $("<div>")
+             .attr("id", "export-selection-overlay")
+             .css({
+               position: "fixed",
+               top: 0,
+               left: 0,
+               width: "100%",
+               height: "100%",
+               backgroundColor: "rgba(0,0,0,0.5)",
+               zIndex: 10000,
+               display: "flex",
+               alignItems: "center",
+               justifyContent: "center"
+             });
+
+           // Create popup content
+           const popup = $("<div>")
+             .attr("id", "export-selection-popup")
+             .css({
+               backgroundColor: "white",
+               borderRadius: "12px",
+               padding: "24px",
+               boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+               maxWidth: "600px",
+               width: "90%",
+               maxHeight: "80vh",
+               overflow: "auto"
+             });
+
+           // Header
+           const header = $("<div>")
+             .css({
+               fontSize: "18px",
+               fontWeight: "bold",
+               marginBottom: "20px",
+               textAlign: "center",
+               color: "#333"
+             });
+
+           if (isLoading) {
+             header.html("Loading Data... <span style='font-size: 14px; font-weight: normal;'>Please wait</span>");
+           } else {
+             header.text("Select Data to Export");
+           }
+
+           // Loading state
+           if (isLoading) {
+             const loadingSpinner = $("<div>")
+               .css({
+                 textAlign: "center",
+                 padding: "40px",
+                 color: "#666"
+               })
+               .html(`
+                 <div style="border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+                 <div>Fetching your evaluation data...</div>
+               `);
+
+             popup.append(header, loadingSpinner);
+             overlay.append(popup);
+             $("body").append(overlay);
+
+             // Add spinner animation
+             const style = $("<style>")
+               .text("@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }");
+             $("head").append(style);
+
+             return;
+           }
+
+           // Period selection
+           const periodSection = $("<div>").css({ marginBottom: "20px" });
+           const periodLabel = $("<div>")
+             .css({ fontWeight: "bold", marginBottom: "8px" })
+             .text("Select Periods:");
+           const periodContainer = $("<div>")
+             .css({ display: "flex", flexWrap: "wrap", gap: "8px" });
+
+           const selectedPeriods = new Set([latestPeriod]); // Default to latest period
+
+           Object.keys(data).reverse().forEach(periodName => {
+             const isSelected = selectedPeriods.has(periodName);
+             const periodButton = $("<button>")
+               .text(periodName)
+               .css({
+                 padding: "6px 12px",
+                 border: `2px solid ${isSelected ? "#007bff" : "#ddd"}`,
+                 backgroundColor: isSelected ? "#007bff" : "white",
+                 color: isSelected ? "white" : "black",
+                 borderRadius: "6px",
+                 cursor: "pointer",
+                 fontSize: "14px",
+                 transition: "all 0.2s ease"
+               })
+               .on("click", function() {
+                 if (selectedPeriods.has(periodName)) {
+                   selectedPeriods.delete(periodName);
+                   $(this).css({
+                     backgroundColor: "white",
+                     color: "black",
+                     borderColor: "#ddd"
+                   });
+                 } else {
+                   selectedPeriods.add(periodName);
+                   $(this).css({
+                     backgroundColor: "#007bff",
+                     color: "white",
+                     borderColor: "#007bff"
+                   });
+                 }
+                 // Update course selection when periods change
+                 updateCourseSelection(data, selectedPeriods, courseContainer, selectedCourses);
+               });
+
+             periodContainer.append(periodButton);
+           });
+
+           periodSection.append(periodLabel, periodContainer);
+
+           // Course selection
+           const courseSection = $("<div>").css({ marginBottom: "20px" });
+           const courseLabel = $("<div>")
+             .css({ fontWeight: "bold", marginBottom: "8px" })
+             .text("Select Courses:");
+           const courseContainer = $("<div>")
+             .css({ display: "flex", flexWrap: "wrap", gap: "8px" });
+
+           // Get all unique courses from selected periods
+           const allCourses = new Set();
+           selectedPeriods.forEach(period => {
+             if (data[period]) {
+               Object.keys(data[period]).forEach(course => allCourses.add(course));
+             }
+           });
+
+           const selectedCourses = new Set(allCourses); // Default to all courses
+
+           Array.from(allCourses).sort().forEach(courseName => {
+             const isSelected = selectedCourses.has(courseName);
+             const courseButton = $("<button>")
+               .text(courseName)
+               .css({
+                 padding: "6px 12px",
+                 border: `2px solid ${isSelected ? "#28a745" : "#ddd"}`,
+                 backgroundColor: isSelected ? "#28a745" : "white",
+                 color: isSelected ? "white" : "black",
+                 borderRadius: "6px",
+                 cursor: "pointer",
+                 fontSize: "14px",
+                 transition: "all 0.2s ease"
+               })
+               .on("click", function() {
+                 if (selectedCourses.has(courseName)) {
+                   selectedCourses.delete(courseName);
+                   $(this).css({
+                     backgroundColor: "white",
+                     color: "black",
+                     borderColor: "#ddd"
+                   });
+                 } else {
+                   selectedCourses.add(courseName);
+                   $(this).css({
+                     backgroundColor: "#28a745",
+                     color: "white",
+                     borderColor: "#28a745"
+                   });
+                 }
+               });
+
+             courseContainer.append(courseButton);
+           });
+
+           courseSection.append(courseLabel, courseContainer);
+
+           // Sorting options
+           const sortSection = $("<div>").css({ marginBottom: "20px" });
+           const sortLabel = $("<div>")
+             .css({ fontWeight: "bold", marginBottom: "8px" })
+             .text("Sort Results By:");
+           const sortContainer = $("<div>")
+             .css({ display: "flex", flexDirection: "column", gap: "6px" });
+
+           let selectedSort = "date"; // Default sort
+
+           const sortOptions = [
+             { value: "date", label: "Date (chronological)" },
+             { value: "period_subject", label: "Period + Subject" },
+             { value: "subject_date", label: "Subject + Date/Period" }
+           ];
+
+           sortOptions.forEach(option => {
+             const isSelected = selectedSort === option.value;
+             const sortRadio = $("<label>")
+               .css({
+                 display: "flex",
+                 alignItems: "center",
+                 padding: "8px 12px",
+                 border: `2px solid ${isSelected ? "#17a2b8" : "#ddd"}`,
+                 backgroundColor: isSelected ? "#17a2b8" : "white",
+                 color: isSelected ? "white" : "black",
+                 borderRadius: "6px",
+                 cursor: "pointer",
+                 fontSize: "14px",
+                 transition: "all 0.2s ease"
+               })
+               .html(`
+                 <input type="radio" name="sortOption" value="${option.value}" ${isSelected ? "checked" : ""} style="margin-right: 8px;">
+                 ${option.label}
+               `)
+               .on("click", function() {
+                 selectedSort = option.value;
+                 // Update visual selection
+                 sortContainer.find("label").css({
+                   backgroundColor: "white",
+                   color: "black",
+                   borderColor: "#ddd"
+                 });
+                 $(this).css({
+                   backgroundColor: "#17a2b8",
+                   color: "white",
+                   borderColor: "#17a2b8"
+                 });
+               });
+
+             sortContainer.append(sortRadio);
+           });
+
+           sortSection.append(sortLabel, sortContainer);
+
+           // Buttons
+           const buttonContainer = $("<div>")
+             .css({
+               display: "flex",
+               gap: "12px",
+               justifyContent: "center",
+               marginTop: "24px"
+             });
+
+           const cancelButton = $("<button>")
+             .text("Cancel")
+             .css({
+               padding: "10px 20px",
+               backgroundColor: "#6c757d",
+               color: "white",
+               border: "none",
+               borderRadius: "6px",
+               cursor: "pointer",
+               fontSize: "14px"
+             })
+             .on("click", function() {
+               overlay.remove();
+             });
+
+           const exportButton = $("<button>")
+             .text("Export Selected")
+             .css({
+               padding: "10px 20px",
+               backgroundColor: "#007bff",
+               color: "white",
+               border: "none",
+               borderRadius: "6px",
+               cursor: "pointer",
+               fontSize: "14px",
+               fontWeight: "bold"
+             })
+             .on("click", function() {
+               overlay.remove();
+               generateDetailedCsv(data, selectedPeriods, selectedCourses, selectedSort);
+             });
+
+           buttonContainer.append(cancelButton, exportButton);
+
+           // Assemble popup
+           popup.append(header, periodSection, courseSection, sortSection, buttonContainer);
+           overlay.append(popup);
+
+           // Add to page
+           $("body").append(overlay);
+
+           // Close on overlay click
+           overlay.on("click", function(e) {
+             if (e.target === overlay[0]) {
+               overlay.remove();
+             }
+           });
+         }
+
+         // Function to update course selection when periods change
+         function updateCourseSelection(data, selectedPeriods, courseContainer, selectedCourses) {
+           // Get all unique courses from newly selected periods
+           const allCourses = new Set();
+           selectedPeriods.forEach(period => {
+             if (data[period]) {
+               Object.keys(data[period]).forEach(course => allCourses.add(course));
+             }
+           });
+
+           // Update selectedCourses to only include available courses
+           const newSelectedCourses = new Set();
+           selectedCourses.forEach(course => {
+             if (allCourses.has(course)) {
+               newSelectedCourses.add(course);
+             }
+           });
+           selectedCourses.clear();
+           newSelectedCourses.forEach(course => selectedCourses.add(course));
+
+           // Rebuild course buttons
+           courseContainer.empty();
+           Array.from(allCourses).sort().forEach(courseName => {
+             const isSelected = selectedCourses.has(courseName);
+             const courseButton = $("<button>")
+               .text(courseName)
+               .css({
+                 padding: "6px 12px",
+                 border: `2px solid ${isSelected ? "#28a745" : "#ddd"}`,
+                 backgroundColor: isSelected ? "#28a745" : "white",
+                 color: isSelected ? "white" : "black",
+                 borderRadius: "6px",
+                 cursor: "pointer",
+                 fontSize: "14px",
+                 transition: "all 0.2s ease"
+               })
+               .on("click", function() {
+                 if (selectedCourses.has(courseName)) {
+                   selectedCourses.delete(courseName);
+                   $(this).css({
+                     backgroundColor: "white",
+                     color: "black",
+                     borderColor: "#ddd"
+                   });
+                 } else {
+                   selectedCourses.add(courseName);
+                   $(this).css({
+                     backgroundColor: "#28a745",
+                     color: "white",
+                     borderColor: "#28a745"
+                   });
+                 }
+               });
+
+             courseContainer.append(courseButton);
+           });
+         }
+
+         // Function to update popup with loaded data
+         function updateExportSelectionPopup(data, latestPeriod) {
+           // Remove loading popup and show real popup
+           $("#export-selection-overlay").remove();
+           showExportSelectionPopup(data, latestPeriod, false);
+         }
+
+         // Function to generate the detailed CSV with selected data and sorting
+         function generateDetailedCsv(data, selectedPeriods, selectedCourses, sortBy = "date") {
+           console.log("[BetterResults] Generating detailed CSV with selections:", {
+             periods: Array.from(selectedPeriods),
+             courses: Array.from(selectedCourses),
+             sortBy: sortBy
+           });
+
+           // Create detailed CSV data
+           const csvData = [];
+           csvData.push([
+             "Period",
+             "Course",
+             "Test Date",
+             "Test Name",
+             "Score",
+             "Percentage",
+             "Color Code"
+           ]);
+
+           // Collect all evaluation data
+           const allEvaluations = [];
+
+           selectedPeriods.forEach(periodName => {
+             if (!data[periodName]) return;
+
+             selectedCourses.forEach(courseName => {
+               if (!data[periodName][courseName]) return;
+
+               data[periodName][courseName].forEach((evaluation) => {
+                 const { description: desc = "/", color } = evaluation.graphic;
+                 const match = desc.match(/([\d,.]+)\/([\d,.]+)/);
+                 let percentage = "";
+                 if (match) {
+                   const num = parseFloat(match[1].replace(',', '.'));
+                   const den = parseFloat(match[2].replace(',', '.'));
+                   percentage = den > 0 ? (Math.round(num / den * 1000) / 10).toFixed(1) + "%" : "";
+                 }
+
+                 // Format date to remove time part
+                 const dateOnly = evaluation.date.split('T')[0];
+
+                 allEvaluations.push({
+                   period: periodName,
+                   course: courseName,
+                   date: dateOnly,
+                   name: evaluation.name,
+                   score: desc,
+                   percentage: percentage,
+                   color: color,
+                   // For sorting
+                   dateObj: new Date(evaluation.date),
+                   periodOrder: periodName,
+                   courseOrder: courseName
+                 });
+               });
+             });
+           });
+
+           // Sort evaluations based on selected method
+           switch (sortBy) {
+             case "date":
+               // Sort by date (chronological)
+               allEvaluations.sort((a, b) => a.dateObj - b.dateObj);
+               break;
+             case "period_subject":
+               // Sort by period, then by subject
+               allEvaluations.sort((a, b) => {
+                 if (a.periodOrder !== b.periodOrder) {
+                   return a.periodOrder.localeCompare(b.periodOrder);
+                 }
+                 return a.courseOrder.localeCompare(b.courseOrder);
+               });
+               break;
+             case "subject_date":
+               // Sort by subject, then by date/period
+               allEvaluations.sort((a, b) => {
+                 if (a.courseOrder !== b.courseOrder) {
+                   return a.courseOrder.localeCompare(b.courseOrder);
+                 }
+                 return a.dateObj - b.dateObj;
+               });
+               break;
+             default:
+               // Default to date sorting
+               allEvaluations.sort((a, b) => a.dateObj - b.dateObj);
+           }
+
+           // Convert to CSV rows
+           allEvaluations.forEach(evaluation => {
+             csvData.push([
+               evaluation.period,
+               evaluation.course,
+               evaluation.date,
+               evaluation.name,
+               evaluation.score,
+               evaluation.percentage,
+               evaluation.color
+             ]);
+           });
+
+           console.log("[BetterResults] Created detailed CSV with", csvData.length, "rows, sorted by:", sortBy);
+
+           if (csvData.length <= 1) {
+             alert("No data found for the selected courses and periods.");
+             return;
+           }
+
+           // Convert to CSV string with consistent formatting
+           const csvContent = csvData.map(row =>
+             row.map(cell => {
+               const cellStr = String(cell || '');
+               // Ensure all cells are treated as text to avoid alignment issues
+               return '"' + cellStr.replace(/"/g, '""') + '"';
+             }).join(',')
+           ).join('\n');
+
+           // Create and download file
+           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+           const link = document.createElement('a');
+
+           if (link.download !== undefined) {
+             const url = URL.createObjectURL(blob);
+             link.setAttribute('href', url);
+
+             const now = new Date();
+             const sortSuffix = sortBy === "date" ? "by_date" : sortBy === "period_subject" ? "by_period_subject" : "by_subject_date";
+             const filename = `smartschool_detailed_results_${sortSuffix}_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}.csv`;
+
+             link.setAttribute('download', filename);
+             link.style.visibility = 'hidden';
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+
+             console.log("[BetterResults] Detailed CSV export completed successfully");
+           } else {
+             console.error("[BetterResults] Download not supported");
+             alert("Your browser doesn't support file downloads.");
+           }
+         }
+
+
+
+         window.exportToCsv = function() {
+           const gridData = window.extractGridData();
+           if (!gridData) return;
+
+           const { headers, data } = gridData;
+
+           // Combine headers and data
+           const csvData = [headers, ...data];
+
+           // Convert to CSV string
+           const csvContent = csvData.map(row =>
+             row.map(cell => {
+               // Escape quotes and wrap in quotes if contains comma, quote, or newline
+               const cellStr = String(cell || '');
+               if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                 return '"' + cellStr.replace(/"/g, '""') + '"';
+               }
+               return cellStr;
+             }).join(',')
+           ).join('\n');
+
+           // Create and download file
+           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+           const link = document.createElement('a');
+
+           if (link.download !== undefined) {
+             const url = URL.createObjectURL(blob);
+             link.setAttribute('href', url);
+
+             // Generate filename with current date
+             const now = new Date();
+             const filename = `smartschool_results_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}.csv`;
+
+             link.setAttribute('download', filename);
+             link.style.visibility = 'hidden';
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+           }
+          };
+
+          window.exportToExcel = function() {
+            const gridData = window.extractGridData();
+            if (!gridData) return;
+
+           const { headers, data } = gridData;
+
+           // Create a new workbook
+           const wb = XLSX.utils.book_new();
+
+           // Prepare data for Excel with formulas
+           const excelData = [];
+           excelData.push(headers);
+
+           // Process each data row
+           data.forEach((row, rowIndex) => {
+             const excelRow = [];
+
+             row.forEach((cell, colIndex) => {
+               if (colIndex === 0) {
+                 // Course name column
+                 excelRow.push(cell);
+               } else if (colIndex === row.length - 1) {
+                 // Total column - create formula
+                 const startCol = XLSX.utils.encode_col(1);
+                 const endCol = XLSX.utils.encode_col(row.length - 2);
+                 const rowNum = rowIndex + 2; // +2 because Excel is 1-indexed and we have header row
+
+                 // Create formula to calculate percentage from scores
+                 let formula = "";
+                 let hasValidScores = false;
+
+                 // Check if we have score data to calculate from
+                 for (let i = 1; i < row.length - 1; i++) {
+                   const score = row[i];
+                   if (score && score.includes('/')) {
+                     hasValidScores = true;
+                     break;
+                   }
+                 }
+
+                 if (hasValidScores) {
+                   // Create formula to sum numerators and denominators
+                   let numeratorSum = "";
+                   let denominatorSum = "";
+
+                   for (let i = 1; i < row.length - 1; i++) {
+                     const col = XLSX.utils.encode_col(i);
+                     const cellRef = col + rowNum;
+
+                     // Extract numerator and denominator from score format like "8/10"
+                     numeratorSum += `IFERROR(LEFT(${cellRef}, FIND("/", ${cellRef}) - 1) * 1, 0) + `;
+                     denominatorSum += `IFERROR(MID(${cellRef}, FIND("/", ${cellRef}) + 1, LEN(${cellRef})) * 1, 0) + `;
+                   }
+
+                   // Remove trailing " + "
+                   numeratorSum = numeratorSum.slice(0, -3);
+                   denominatorSum = denominatorSum.slice(0, -3);
+
+                   // Create percentage formula
+                   formula = `IF(${denominatorSum} > 0, ROUND((${numeratorSum}) / (${denominatorSum}) * 1000) / 10, "")`;
+                 } else {
+                   // Just use the existing total if no scores to calculate from
+                   formula = cell;
+                 }
+
+                 excelRow.push({ t: 's', f: formula });
+               } else {
+                 // Regular data cell - check if it's a score format
+                 if (cell && cell.includes('/')) {
+                   // Keep as string for display
+                   excelRow.push(cell);
+                 } else {
+                   // Regular cell
+                   excelRow.push(cell);
+                 }
+               }
+             });
+
+             excelData.push(excelRow);
+           });
+
+           // Create worksheet
+           const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+           // Set column widths
+           const colWidths = headers.map(header => ({ wch: Math.max(header.length, 15) }));
+           ws['!cols'] = colWidths;
+
+           // Add worksheet to workbook
+           XLSX.utils.book_append_sheet(wb, ws, "Grid Results");
+
+           // Generate filename with current date
+           const now = new Date();
+           const filename = `smartschool_results_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}.xlsx`;
+
+           // Save file
+           XLSX.writeFile(wb, filename);
+          };
+
+         // Create export button in bottom right corner (like graph settings button)
+         const exportButton = $("<button>")
+           .attr("id", "grid-export-button")
+           .html("📊") // Export icon
+           .css({
+             position: "fixed",
+             bottom: "20px",
+             right: "20px",
+             width: "44px",
+             height: "44px",
+             borderRadius: "8px",
+             border: "1px solid #e0e0e0",
+             backgroundColor: "white",
+             color: "#666",
+             cursor: "pointer",
+             fontSize: "18px",
+             zIndex: 1000,
+             display: "flex",
+             alignItems: "center",
+             justifyContent: "center",
+             boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+             transition: "all 0.2s ease",
+             fontFamily: "Arial, sans-serif"
+           })
+           .hover(
+             function() {
+               $(this).css({
+                 backgroundColor: "#f8f9fa",
+                 color: "#333",
+                 boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                 transform: "scale(1.05)"
+               });
+             },
+             function() {
+               $(this).css({
+                 backgroundColor: "white",
+                 color: "#666",
+                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                 transform: "scale(1)"
+               });
+             }
+           )
+           .on("click", function(e) {
+             e.stopPropagation();
+             // Show export options menu
+             showExportMenu($(this));
+           })
+           .attr("title", "Export Grid Data")
+           .attr("aria-label", "Export grid data");
+
+         // Create export menu (hidden by default)
+         const exportMenu = $("<div>")
+           .attr("id", "grid-export-menu")
+           .css({
+             position: "absolute",
+             bottom: "60px",
+             right: "0",
+             backgroundColor: "white",
+             borderRadius: "8px",
+             boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+             padding: "8px",
+             display: "none",
+             zIndex: 1001,
+             minWidth: "150px"
+           });
+
+         const csvOption = $("<button>")
+           .text("📄 Export Grid (Simple)")
+           .css({
+             display: "block",
+             width: "100%",
+             padding: "8px 12px",
+             border: "none",
+             backgroundColor: "transparent",
+             color: "#333",
+             cursor: "pointer",
+             textAlign: "left",
+             borderRadius: "4px",
+             fontSize: "14px",
+             transition: "background-color 0.2s ease"
+           })
+           .hover(
+             function() {
+               $(this).css("backgroundColor", "#f8f9fa");
+             },
+             function() {
+               $(this).css("backgroundColor", "transparent");
+             }
+           )
+           .on("click", function() {
+             exportMenu.hide();
+             window.exportToCsv();
+           });
+
+         const detailedCsvOption = $("<button>")
+           .text("📋 Export Detailed (with test info)")
+           .css({
+             display: "block",
+             width: "100%",
+             padding: "8px 12px",
+             border: "none",
+             backgroundColor: "transparent",
+             color: "#333",
+             cursor: "pointer",
+             textAlign: "left",
+             borderRadius: "4px",
+             fontSize: "14px",
+             transition: "background-color 0.2s ease"
+           })
+           .hover(
+             function() {
+               $(this).css("backgroundColor", "#f8f9fa");
+             },
+             function() {
+               $(this).css("backgroundColor", "transparent");
+             }
+           )
+           .on("click", function() {
+             exportMenu.hide();
+             window.exportToCsvDetailed();
+           });
+
+         exportMenu.append(csvOption, detailedCsvOption);
+         exportButton.append(exportMenu);
+
+         // Function to show export menu
+         function showExportMenu(button) {
+           const menu = button.find("#grid-export-menu");
+           menu.toggle();
+
+           // Hide menu when clicking outside
+           if (menu.is(":visible")) {
+             $(document).on("click.exportMenu", function(e) {
+               if (!$(e.target).closest("#grid-export-button").length) {
+                 menu.hide();
+                 $(document).off("click.exportMenu");
+               }
+             });
+           }
+         }
+
+
+
+         modal.append(periodButtons, mainGrid, exportButton);
       
        applyFilterBtn.on("click", function() {
          const filterDate = dateInput.val();
@@ -1776,6 +2678,81 @@ subtle shadow). The JS still sets the exact background/text colours. */
   background-color: #f8f9fa;
   border-radius: 8px;
   border: 1px solid #dee2e6;
+  flex-wrap: wrap;
+}
+
+/* Grid export button styling */
+#grid-export-button {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+#grid-export-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#grid-export-button:active {
+  transform: scale(0.95);
+}
+
+/* Export menu styling */
+#grid-export-menu {
+  border: 1px solid #e0e0e0;
+  min-width: 200px; /* Wider to accommodate longer text */
+}
+
+#grid-export-menu button {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px; /* Slightly smaller for longer text */
+  font-weight: 400;
+  white-space: normal; /* Allow text wrapping */
+  word-wrap: break-word;
+}
+
+#grid-export-menu button:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* Export selection popup styling */
+#export-selection-overlay {
+  font-family: 'Poppins', sans-serif;
+}
+
+#export-selection-popup {
+  font-family: 'Poppins', sans-serif;
+}
+
+#export-selection-popup button {
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s ease;
+}
+
+#export-selection-popup button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Radio button styling */
+#export-selection-popup input[type="radio"] {
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+#export-selection-popup label {
+  cursor: pointer;
+  user-select: none;
+}
+
+#export-selection-popup label:hover {
+  opacity: 0.8;
 }
 
 #date-filter-input {

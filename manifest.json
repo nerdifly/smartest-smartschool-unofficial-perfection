@@ -37,6 +37,7 @@
       "js": [
         "static/js/jquery-3.4.1.min.js",
         "static/js/chart.4.4.1.min.js",
+        "static/js/xlsx.full.min.js",
         "Main/BetterResults.js"
       ],
       "run_at": "document_end"
