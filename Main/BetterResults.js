@@ -2,15 +2,10 @@
 
 "use strict";
 
-/* -------------------------------------------------------------------------- */
-/* 1. Mutation observers                                                      */
-/* -------------------------------------------------------------------------- */
 
-/**
- * When Smartschool re‑renders the toolbar, our custom buttons disappear.  We
- * watch for those removals and immediately re‑append the buttons so they stay
- * visible.
- */
+// MARK: observers
+
+//so aperently smartschool likes to remove buttons so this will add them back every time they do 
 const wideToolbarObserver = new MutationObserver((mutations) => {
   for (const { type, removedNodes } of mutations) {
     if (type !== "childList" || removedNodes.length === 0) continue;
@@ -23,43 +18,40 @@ const wideToolbarObserver = new MutationObserver((mutations) => {
   }
 });
 
-/**
- * We cannot observe <.wide-toolbar> until it exists.  Therefore we start with
- * #smscMain; as soon as the toolbar is added we: disconnect, start the toolbar
- * observer, inject our buttons, and preload the modal content.
- */
+// so it look at the #smscMain cuzz that loads first of course and then look sat the child 
 new MutationObserver((mutations, obs) => {
   for (const { type, addedNodes } of mutations) {
+    // if we find the wide-toolbar we continue
     if (
       type === "childList" &&
       addedNodes.length === 1 &&
       addedNodes[0].classList.contains("wide-toolbar")
     ) {
-      obs.disconnect();
+      obs.disconnect(); // stop observing cuzz we found the toolbar
 
       console.log('[BetterResults] Toolbar detected, initializing extension...');
 
-      // 1️⃣ Start watching the toolbar itself
+      // now tool barr is getting stalked (removed child stalking joke)
       wideToolbarObserver.observe($(".wide-toolbar")[0], {
         childList: true,
         subtree: false,
       });
 
-      // 2️⃣ Create content area for custom tabs
+      // we load all our shit
       createCustomContentArea();
 
-       // 3️⃣ Prepare our UI assets
+       
        LoadGrid();
        LoadGraph();
        addButtons();
        addCourseIconStyles();
 
-      // 4️⃣ Set up URL change detection
+      // yea so if the url chnages we just say (we out a here) so this is important or else you break ur smartschool 🙃
       setupURLChangeDetection();
 
       console.log('[BetterResults] Extension initialized successfully');
 
-      // Send message to background script
+      // letting granddad know that we made it (Send message to background script)
       try {
         chrome.runtime.sendMessage({
           action: 'extensionInitialized',
@@ -72,9 +64,8 @@ new MutationObserver((mutations, obs) => {
   }
 }).observe($("#smscMain")[0], { childList: true, subtree: false });
 
-/* -------------------------------------------------------------------------- */
-/* 2. Helper utilities                                                        */
-/* -------------------------------------------------------------------------- */
+
+// MARK:Helper utilities
 
 /** Format 3/5 -> "60.0%" with one decimal */
 function ratioToPercent(num, den) {
@@ -114,9 +105,10 @@ function addCourseIconStyles() {
   loadCSS("static/css/better-results-course-icons.css", "better-results-course-icons-css");
 }
 
-/* -------------------------------------------------------------------------- */
-/* 3. Wide‑toolbar button injection                                           */
-/* -------------------------------------------------------------------------- */
+
+// MARK: Button injection
+// for tha Wide‑toolbar 
+
 
 // Global variables for tab management
 let currentCustomTab = null; // 'grid' or 'graph' or null
@@ -498,9 +490,8 @@ function setupURLChangeDetection() {
   console.log('[BetterResults] URL change detection setup complete');
 }
 
-/* -------------------------------------------------------------------------- */
-/* 4. GRID view                                                               */
-/* -------------------------------------------------------------------------- */
+
+// MARK: GRID view
 
 function MakeGrid() {
    const loading = $("<h3>").text("Loading…");
@@ -2390,10 +2381,7 @@ function LoadGraph() {
 
 
 
-
-/*  🟢  GRAPH  – real Chart.js rendering                                    */
-/* -------------------------------------------------------------------------- */
-
+// MARK: Graph rendering
 /**
  * Utility – turn “8/15” → {num:8, den:15, pct:53.3}
  */
