@@ -958,15 +958,15 @@ function MakeGrid() {
             }
           });
 
-          // Add evaluation column headers
-          for (let i = 1; i <= maxEvaluations; i++) {
-            headerRow.append($("<th>").text("Eval " + i).css({
-              textAlign: "center",
-              backgroundColor: "#f8f9fa",
-              fontWeight: "bold",
-              minWidth: "100px"
-            }));
-          }
+           // Add evaluation column headers
+           for (let i = 1; i <= maxEvaluations; i++) {
+             headerRow.append($("<th>").text("").css({
+               textAlign: "center",
+               backgroundColor: "#f8f9fa",
+               fontWeight: "bold",
+               minWidth: "100px"
+             }));
+           }
 
           // Add total column
           headerRow.append($("<th>").text("Total").css({
