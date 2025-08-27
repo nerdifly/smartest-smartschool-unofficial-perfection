@@ -1505,140 +1505,29 @@ function MakeGrid() {
            return { headers, data: tableData };
          };
 
-         // Enhanced CSV export with detailed test information and selection popup
-         window.exportToCsvDetailed = function() {
-           console.log("[BetterResults] Starting detailed CSV export...");
+          // Enhanced CSV export with detailed test information and selection popup
+          window.exportToCsvDetailed = function() {
+            console.log("[BetterResults] Starting detailed CSV export...");
 
-           // Show popup immediately with loading state
-           showExportSelectionPopup(null, null, true);
+            // Get the currently selected year from the year selector
+            const selectedYear = parseInt(yearSelect.val());
+            if (!selectedYear) {
+              alert("Please select a year first");
+              return;
+            }
 
-           // Get the current period and course data from the API response
-   // Function to fetch evaluations for a specific year
-   function fetchEvaluationsForYear(startYear) {
-     const startDate = `${startYear}-09-01`;
-     const endDate = `${startYear + 1}-08-31`;
-     const url = `/results/api/v1/evaluations?pageNumber=1&itemsOnPage=500&startDate=${startDate}&endDate=${endDate}`;
+            console.log(`[BetterResults] Exporting data for year: ${selectedYear}`);
 
-     console.log(`[BetterResults] Fetching evaluations for year ${startYear}: ${url}`);
-     return fetch(url).then(r => r.json());
-   }
+            // Show popup immediately with loading state
+            showExportSelectionPopup(null, null, true);
 
-   // Function to find available school years
-   function findAvailableYears() {
-     const currentDate = new Date();
-     const currentYear = currentDate.getFullYear();
-     const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+            // Use the already loaded data for the selected year
+            // The data is already available in the global variables
+            console.log("[BetterResults] Using already loaded data for export");
 
-     // Determine current school year
-     // School year starts in September, so if we're before September, we're in the previous year
-     const currentSchoolYear = currentMonth < 9 ? currentYear - 1 : currentYear;
-
-     console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
-
-     const years = [];
-     let yearToCheck = currentSchoolYear;
-
-     // Try current year first
-     return fetchEvaluationsForYear(yearToCheck)
-       .then(results => {
-         const gradeCount = results.filter(r => r.type === "normal").length;
-         if (gradeCount > 0) {
-           years.push({ year: yearToCheck, count: gradeCount });
-         }
-
-         // Continue checking previous years until we find one with no grades
-         function checkNextYear() {
-           yearToCheck--;
-           return fetchEvaluationsForYear(yearToCheck)
-             .then(results => {
-               const gradeCount = results.filter(r => r.type === "normal").length;
-               if (gradeCount > 0) {
-                 years.push({ year: yearToCheck, count: gradeCount });
-                 return checkNextYear(); // Continue checking
-               } else {
-                 // No more grades found, stop here
-                 return years;
-               }
-             });
-         }
-
-         return checkNextYear();
-       })
-       .then(() => {
-         // Sort years descending (newest first)
-         return years.sort((a, b) => b.year - a.year);
-       });
-   }
-
-   // Load years and populate selector
-   findAvailableYears()
-     .then(availableYears => {
-       console.log(`[BetterResults] Found ${availableYears.length} years with grades:`, availableYears);
-
-       // Populate year selector
-       yearSelect.empty();
-       availableYears.forEach(yearData => {
-         const option = $("<option>")
-           .attr("value", yearData.year)
-           .text(`${yearData.year}-${yearData.year + 1} (${yearData.count} grades)`);
-         yearSelect.append(option);
-       });
-
-       // Set current year as selected if available
-       const currentDate = new Date();
-       const currentMonth = currentDate.getMonth() + 1;
-       const currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
-
-       if (availableYears.find(y => y.year === currentSchoolYear)) {
-         yearSelect.val(currentSchoolYear);
-       }
-
-       statusText.text(`Found ${availableYears.length} years with grades`);
-
-       // Now fetch data for the selected year
-       const selectedYear = parseInt(yearSelect.val());
-       return fetchEvaluationsForYear(selectedYear);
-     })
-     .then((results) => {
-               console.log("[BetterResults] Fetched evaluation data:", results.length, "results");
-
-               // Structure: { [period]: { [course]: result[] } }
-               const data = {};
-               const courseIcons = {};
-               let latestPeriod = null;
-
-               // Parse Smartschool API payload
-               results.forEach((res) => {
-                 if (res.type !== "normal") return;
-
-                 const period = res.period.name;
-                 latestPeriod ??= period;
-                 data[period] ??= {};
-
-                 res.courses.forEach((course) => {
-                   const name = course.name;
-                   data[period][name] ??= [];
-                   data[period][name].push({
-                     date: res.date,
-                     name: res.name,
-                     graphic: res.graphic,
-                     period: period,
-                     course: name
-                   });
-                   courseIcons[name] = course.graphic;
-                 });
-               });
-
-               // Update popup with loaded data
-               updateExportSelectionPopup(data, latestPeriod);
-             })
-             .catch((error) => {
-               console.error("[BetterResults] Error fetching detailed data:", error);
-               alert("Error loading detailed data: " + error.message);
-               // Remove loading popup
-               $("#export-selection-overlay").remove();
-             });
-         };
+            // Update popup with the current data
+            updateExportSelectionPopup(data, latestPeriod);
+          };
 
          // Function to show export selection popup
          function showExportSelectionPopup(data, latestPeriod, isLoading = false) {
