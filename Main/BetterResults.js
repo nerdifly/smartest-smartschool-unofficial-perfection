@@ -759,6 +759,30 @@ function MakeGrid() {
 
         // Move selectedPeriods to outer scope so it can be accessed by createCombinedGrid
         let selectedPeriods = new Set();
+        let isProcessingClick = false; // Prevent rapid clicking
+
+        // Function to synchronize button CSS with backend state
+        function syncButtonStates() {
+          $('.period-button-grid').each(function() {
+            const $btn = $(this);
+            const period = $btn.data('period');
+            const isSelected = selectedPeriods.has(period);
+
+            if (isSelected) {
+              $btn.css({
+                backgroundColor: "#007bff",
+                borderColor: "#007bff",
+                color: "white"
+              }).addClass('period-button-initial-selected');
+            } else {
+              $btn.css({
+                backgroundColor: "white",
+                borderColor: "#ddd",
+                color: "black"
+              }).removeClass('period-button-initial-selected');
+            }
+          });
+        }
 
         function updatePeriodButtons(grids) {
           periodButtons.empty();
@@ -812,31 +836,51 @@ function MakeGrid() {
                    }
                  }
                )
-               .on("click", function() {
-                 const $btn = $(this);
-                 const period = $btn.data("period");
-                 console.log(`[BetterResults] Button clicked for period: ${period}`);
+                .on("click", function() {
+                  const $btn = $(this);
+                  const period = $btn.data("period");
 
-                 // Remove initial-selected class from all buttons when user interacts
-                 $('.period-button-grid').removeClass('period-button-initial-selected');
+                  // Prevent rapid clicking
+                  if (isProcessingClick) {
+                    console.log(`[BetterResults] Ignoring rapid click for period: ${period}`);
+                    return;
+                  }
 
-                 if (selectedPeriods.has(period)) {
-                   selectedPeriods.delete(period);
-                   $btn.css({
-                     backgroundColor: "white",
-                     borderColor: "#ddd",
-                     color: "black"
-                   });
-                 } else {
-                   selectedPeriods.add(period);
-                   $btn.css({
-                     backgroundColor: "#007bff",
-                     borderColor: "#007bff",
-                     color: "white"
-                   });
-                 }
-                 loadCombinedGrid();
-               });
+                  isProcessingClick = true;
+                  console.log(`[BetterResults] Button clicked for period: ${period}`);
+
+                  // Add visual feedback - reduce opacity and change cursor
+                  $btn.css({
+                    opacity: 0.7,
+                    cursor: 'not-allowed',
+                    pointerEvents: 'none'
+                  });
+
+                  // Remove initial-selected class from all buttons when user interacts
+                  $('.period-button-grid').removeClass('period-button-initial-selected');
+
+                  // Update backend state
+                  if (selectedPeriods.has(period)) {
+                    selectedPeriods.delete(period);
+                  } else {
+                    selectedPeriods.add(period);
+                  }
+
+                  // Sync CSS with backend state
+                  syncButtonStates();
+
+                  // Load combined grid with small delay to prevent race conditions
+                  setTimeout(() => {
+                    loadCombinedGrid();
+                    isProcessingClick = false;
+                    // Restore visual feedback
+                    $btn.css({
+                      opacity: 1,
+                      cursor: 'pointer',
+                      pointerEvents: 'auto'
+                    });
+                  }, 50);
+                });
 
             periodButtonsContainer.append(button);
           });
@@ -851,56 +895,20 @@ function MakeGrid() {
             mainGrid.append(combinedTable);
           }
 
-         // Initialize with latest period selected
-         if (latestPeriod && grids[latestPeriod]) {
-           selectedPeriods.add(latestPeriod);
-           console.log(`[BetterResults] Selecting latest period: ${latestPeriod}`);
+          // Initialize with latest period selected
+          if (latestPeriod && grids[latestPeriod]) {
+            selectedPeriods.add(latestPeriod);
+            console.log(`[BetterResults] Selecting latest period: ${latestPeriod}`);
 
-           // Use setTimeout to ensure DOM is ready
-           setTimeout(() => {
-             const $button = $(`.period-button-grid[data-period="${latestPeriod}"]`);
-             console.log(`[BetterResults] Found button for ${latestPeriod}:`, $button.length);
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+              // Sync all button states to ensure consistency
+              syncButtonStates();
+              console.log(`[BetterResults] Applied initial selection styling to ${latestPeriod}`);
+            }, 100);
 
-             if ($button.length > 0) {
-               $button
-                 .addClass("period-button-initial-selected")
-                 .css({
-                   backgroundColor: "#007bff",
-                   borderColor: "#007bff",
-                   color: "white"
-                 });
-               console.log(`[BetterResults] Applied initial selection styling to ${latestPeriod}`);
-               console.log(`[BetterResults] Button classes:`, $button.attr('class'));
-               console.log(`[BetterResults] Button styles:`, $button.attr('style'));
-             } else {
-               console.warn(`[BetterResults] Could not find button for period: ${latestPeriod}`);
-               // Try alternative selectors
-               console.log(`[BetterResults] All period buttons:`, $('.period-button-grid').length);
-               $('.period-button-grid').each(function() {
-                 console.log(`[BetterResults] Button text: "${$(this).text()}", data-period: "${$(this).attr('data-period')}"`);
-               });
-             }
-
-             // Additional fallback: try to find by text content
-             if ($button.length === 0) {
-               $('.period-button-grid').each(function() {
-                 if ($(this).text().trim() === latestPeriod) {
-                   console.log(`[BetterResults] Found button by text match: ${latestPeriod}`);
-                   $(this)
-                     .addClass("period-button-initial-selected")
-                     .css({
-                       backgroundColor: "#007bff",
-                       borderColor: "#007bff",
-                       color: "white"
-                     });
-                   return false; // break out of each loop
-                 }
-               });
-             }
-           }, 100);
-
-           loadCombinedGrid();
-         }
+            loadCombinedGrid();
+          }
         }
       
 
@@ -2240,31 +2248,19 @@ function MakeGrid() {
 
          updatePeriodButtons(newPeriodGrids);
 
-          // After filtering, select the latest available period by default
-          const availablePeriods = Object.keys(newPeriodGrids);
-          if (availablePeriods.length > 0) {
-            const latestPeriod = availablePeriods[availablePeriods.length - 1];
-            // Clear all selections and classes first
-            $('.period-button-grid').removeClass('period-button-initial-selected').css({
-              backgroundColor: "white",
-              borderColor: "#ddd",
-              color: "black"
-            });
-            // Select the latest period with initial-selected styling
-            $(`.period-button-grid[data-period="${latestPeriod}"]`)
-              .addClass('period-button-initial-selected')
-              .css({
-                backgroundColor: "#007bff",
-                borderColor: "#007bff",
-                color: "white"
-              });
-            // Update selectedPeriods set
-            selectedPeriods.clear();
-            selectedPeriods.add(latestPeriod);
-            loadCombinedGrid();
-          } else {
-            $('#period-container-grid').empty().append($("<p>").text("No results match your filter criteria"));
-          }
+           // After filtering, select the latest available period by default
+           const availablePeriods = Object.keys(newPeriodGrids);
+           if (availablePeriods.length > 0) {
+             const latestPeriod = availablePeriods[availablePeriods.length - 1];
+             // Update selectedPeriods set
+             selectedPeriods.clear();
+             selectedPeriods.add(latestPeriod);
+             // Sync all button states
+             syncButtonStates();
+             loadCombinedGrid();
+           } else {
+             $('#period-container-grid').empty().append($("<p>").text("No results match your filter criteria"));
+           }
        });
       
         clearFilterBtn.on("click", function() {
@@ -2272,27 +2268,15 @@ function MakeGrid() {
 
           updatePeriodButtons(periodGrids);
 
-          // Restore the latest period selection after clearing filter
-          if (latestPeriod && periodGrids[latestPeriod]) {
-            // Clear all selections and classes first
-            $('.period-button-grid').removeClass('period-button-initial-selected').css({
-              backgroundColor: "white",
-              borderColor: "#ddd",
-              color: "black"
-            });
-            // Select the latest period with initial-selected styling
-            $(`.period-button-grid[data-period="${latestPeriod}"]`)
-              .addClass('period-button-initial-selected')
-              .css({
-                backgroundColor: "#007bff",
-                borderColor: "#007bff",
-                color: "white"
-              });
-            // Update selectedPeriods set
-            selectedPeriods.clear();
-            selectedPeriods.add(latestPeriod);
-            loadCombinedGrid();
-          }
+           // Restore the latest period selection after clearing filter
+           if (latestPeriod && periodGrids[latestPeriod]) {
+             // Update selectedPeriods set
+             selectedPeriods.clear();
+             selectedPeriods.add(latestPeriod);
+             // Sync all button states
+             syncButtonStates();
+             loadCombinedGrid();
+           }
         });
 
        loading.replaceWith(modal);
@@ -3107,9 +3091,33 @@ function MakeGraph() {
         marginBottom: "1rem"
       });
 
-      const selectedPeriods = new Set();
+       const selectedPeriods = new Set();
+       let isProcessingClickGraph = false; // Prevent rapid clicking for graph
 
-      Object.keys(data).reverse().forEach(periodName => {
+       // Function to synchronize graph button CSS with backend state
+       function syncGraphButtonStates() {
+         $('.period-button-graph').each(function() {
+           const $btn = $(this);
+           const period = $btn.data('period');
+           const isSelected = selectedPeriods.has(period);
+
+           if (isSelected) {
+             $btn.css({
+               backgroundColor: "#007bff",
+               borderColor: "#007bff",
+               color: "white"
+             }).addClass('period-button-initial-selected');
+           } else {
+             $btn.css({
+               backgroundColor: "white",
+               borderColor: "#ddd",
+               color: "black"
+             }).removeClass('period-button-initial-selected');
+           }
+         });
+       }
+
+       Object.keys(data).reverse().forEach(periodName => {
          const button = $("<button>")
            .addClass("period-button-graph")
            .text(periodName)
@@ -3147,31 +3155,51 @@ function MakeGraph() {
                }
              }
            )
-           .on("click", function() {
-             const $btn = $(this);
-             const period = $btn.data("period");
-             console.log(`[BetterResults] Graph button clicked for period: ${period}`);
+            .on("click", function() {
+              const $btn = $(this);
+              const period = $btn.data("period");
 
-             // Remove initial-selected class from all buttons when user interacts
-             $('.period-button-graph').removeClass('period-button-initial-selected');
+              // Prevent rapid clicking
+              if (isProcessingClickGraph) {
+                console.log(`[BetterResults] Ignoring rapid click for graph period: ${period}`);
+                return;
+              }
 
-             if (selectedPeriods.has(period)) {
-              selectedPeriods.delete(period);
+              isProcessingClickGraph = true;
+              console.log(`[BetterResults] Graph button clicked for period: ${period}`);
+
+              // Add visual feedback - reduce opacity and change cursor
               $btn.css({
-                backgroundColor: "white",
-                borderColor: "#ddd",
-                color: "black"
+                opacity: 0.7,
+                cursor: 'not-allowed',
+                pointerEvents: 'none'
               });
-            } else {
-              selectedPeriods.add(period);
-              $btn.css({
-                backgroundColor: "#007bff",
-                borderColor: "#007bff",
-                color: "white"
-              });
-            }
-            updateSubjectsAndChart();
-          });
+
+              // Remove initial-selected class from all buttons when user interacts
+              $('.period-button-graph').removeClass('period-button-initial-selected');
+
+              // Update backend state
+              if (selectedPeriods.has(period)) {
+               selectedPeriods.delete(period);
+             } else {
+               selectedPeriods.add(period);
+             }
+
+             // Sync CSS with backend state
+             syncGraphButtonStates();
+
+             // Update subjects and chart with small delay to prevent race conditions
+             setTimeout(() => {
+               updateSubjectsAndChart();
+               isProcessingClickGraph = false;
+               // Restore visual feedback
+               $btn.css({
+                 opacity: 1,
+                 cursor: 'pointer',
+                 pointerEvents: 'auto'
+               });
+             }, 50);
+           });
 
         periodButtons.append(button);
       });
@@ -3717,54 +3745,20 @@ function MakeGraph() {
         });
       }
 
-       // Initialize with latest period selected
-       if (latestPeriod) {
-         selectedPeriods.add(latestPeriod);
-         console.log(`[BetterResults] Selecting latest period for graph: ${latestPeriod}`);
+        // Initialize with latest period selected
+        if (latestPeriod) {
+          selectedPeriods.add(latestPeriod);
+          console.log(`[BetterResults] Selecting latest period for graph: ${latestPeriod}`);
 
-         // Use setTimeout to ensure DOM is ready
-         setTimeout(() => {
-           const $button = $(`.period-button-graph[data-period="${latestPeriod}"]`);
-           console.log(`[BetterResults] Found graph button for ${latestPeriod}:`, $button.length);
+          // Use setTimeout to ensure DOM is ready
+          setTimeout(() => {
+            // Sync all button states to ensure consistency
+            syncGraphButtonStates();
+            console.log(`[BetterResults] Applied initial selection styling to graph button ${latestPeriod}`);
+          }, 100);
 
-           if ($button.length > 0) {
-             $button
-               .addClass("period-button-initial-selected")
-               .css({
-                 backgroundColor: "#007bff",
-                 borderColor: "#007bff",
-                 color: "white"
-               });
-             console.log(`[BetterResults] Applied initial selection styling to graph button ${latestPeriod}`);
-           } else {
-             console.warn(`[BetterResults] Could not find graph button for period: ${latestPeriod}`);
-             // Try alternative selectors
-             console.log(`[BetterResults] All graph period buttons:`, $('.period-button-graph').length);
-             $('.period-button-graph').each(function() {
-               console.log(`[BetterResults] Graph button text: "${$(this).text()}", data-period: "${$(this).attr('data-period')}"`);
-             });
-
-             // Fallback: try to find by text content
-             if ($button.length === 0) {
-               $('.period-button-graph').each(function() {
-                 if ($(this).text().trim() === latestPeriod) {
-                   console.log(`[BetterResults] Found graph button by text match: ${latestPeriod}`);
-                   $(this)
-                     .addClass("period-button-initial-selected")
-                     .css({
-                       backgroundColor: "#007bff",
-                       borderColor: "#007bff",
-                       color: "white"
-                     });
-                   return false; // break out of each loop
-                 }
-               });
-             }
-           }
-         }, 100);
-
-         updateSubjectsAndChart();
-       }
+          updateSubjectsAndChart();
+        }
 
         modal.append(settingsButton, periodLabel, periodButtons, subjectLabel, subjectButtons, chartTitle, chartContainer);
 
