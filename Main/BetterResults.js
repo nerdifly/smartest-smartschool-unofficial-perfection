@@ -2945,31 +2945,90 @@ subtle shadow). The JS still sets the exact background/text colours. */
   box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  #filter-container-grid {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+    /* Year selector for grid */
+    #year-selector-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+    }
 
-  #period-buttons-grid {
-    flex-direction: column;
-  }
+    #year-selector {
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      font-size: 0.9rem;
+    }
 
-  .period-button-grid {
-    width: 100%;
-    margin-bottom: 0.25rem;
-  }
+    #apply-year-btn {
+      padding: 5px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
 
-  #combined-result-table {
-    font-size: 0.8rem;
-  }
+    #apply-year-btn:hover {
+      background-color: #0056b3;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
-  #combined-result-table th,
-  #combined-result-table td {
-    padding: 0.25rem;
-  }
-}
+    #apply-year-btn:active {
+      transform: translateY(0);
+    }
+
+    #apply-year-btn:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #year-selector-status {
+      font-size: 12px;
+      color: #666;
+      margin-left: 10px;
+      font-style: italic;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      #filter-container-grid {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      #year-selector-container {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      #period-buttons-grid {
+        flex-direction: column;
+      }
+
+      .period-button-grid {
+        width: 100%;
+        margin-bottom: 0.25rem;
+      }
+
+      #combined-result-table {
+        font-size: 0.8rem;
+      }
+
+      #combined-result-table th,
+      #combined-result-table td {
+        padding: 0.25rem;
+      }
+     }
 
 /* Filter container styling */
 #filter-container-grid {
