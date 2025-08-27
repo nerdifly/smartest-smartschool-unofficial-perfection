@@ -3284,12 +3284,175 @@ function colourFor(y) {
 /* -------------------------------------------------------------------------- */
 
 function MakeGraph() {
-  const loading = $("<h3>").text("Loading…");
+   const loading = $("<h3>").text("Loading…");
 
-  fetch("/results/api/v1/evaluations?itemsOnPage=500")
-    .then((r) => r.json())
-    .then((results) => {
-      const data = {};
+   // Year selector container for graph
+   const yearSelectorContainerGraph = $("<div>")
+     .attr("id", "year-selector-container-graph")
+     .css({
+       display: "flex",
+       alignItems: "center",
+       gap: "10px",
+       marginBottom: "10px"
+     });
+
+   // Year selector dropdown for graph
+   const yearSelectGraph = $("<select>")
+     .attr("id", "year-selector-graph")
+     .css({
+       padding: "5px 10px",
+       borderRadius: "4px",
+       border: "1px solid #ddd"
+     });
+
+   // Apply button for graph
+   const applyYearBtnGraph = $("<button>")
+     .attr("id", "apply-year-btn-graph")
+     .text("Apply")
+     .addClass("period_button-graph")
+     .css({
+       padding: "5px 15px",
+       backgroundColor: "#007bff",
+       color: "white",
+       border: "none",
+       borderRadius: "4px",
+       cursor: "pointer"
+     });
+
+   // Status text for graph
+   const statusTextGraph = $("<span>")
+     .attr("id", "year-selector-status-graph")
+     .text("Loading years...")
+     .css({
+       fontSize: "12px",
+       color: "#666",
+       marginLeft: "10px"
+     });
+
+   yearSelectorContainerGraph.append(
+     $("<span>").text("Select Year: "),
+     yearSelectGraph,
+     applyYearBtnGraph,
+     statusTextGraph
+   );
+
+    // Function to fetch evaluations for a specific year
+    function fetchEvaluationsForYear(startYear) {
+      const startDate = `${startYear}-09-01`;
+      const endDate = `${startYear + 1}-08-31`;
+      const url = `/results/api/v1/evaluations?pageNumber=1&itemsOnPage=500&startDate=${startDate}&endDate=${endDate}`;
+
+      console.log(`[BetterResults] Fetching evaluations for year ${startYear}: ${url}`);
+      return fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .catch(error => {
+          console.error(`[BetterResults] Fetch error for year ${startYear}:`, error);
+          throw error;
+        });
+    }
+
+   // Function to find available school years
+   function findAvailableYears() {
+     const currentDate = new Date();
+     const currentYear = currentDate.getFullYear();
+     const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+
+     // Determine current school year
+     // School year starts in September, so if we're before September, we're in the previous year
+     const currentSchoolYear = currentMonth < 9 ? currentYear - 1 : currentYear;
+
+     console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
+
+     const years = [];
+     let yearToCheck = currentSchoolYear;
+
+     // Try current year first
+     return fetchEvaluationsForYear(yearToCheck)
+       .then(results => {
+         const gradeCount = results.filter(r => r.type === "normal").length;
+         if (gradeCount > 0) {
+           years.push({ year: yearToCheck, count: gradeCount });
+         }
+
+         // Continue checking previous years until we find one with no grades
+         function checkNextYear() {
+           yearToCheck--;
+           return fetchEvaluationsForYear(yearToCheck)
+             .then(results => {
+               const gradeCount = results.filter(r => r.type === "normal").length;
+               if (gradeCount > 0) {
+                 years.push({ year: yearToCheck, count: gradeCount });
+                 return checkNextYear(); // Continue checking
+               } else {
+                 // No more grades found, stop here
+                 return years;
+               }
+             });
+         }
+
+         return checkNextYear();
+       })
+       .then(() => {
+         // Sort years descending (newest first)
+         return years.sort((a, b) => b.year - a.year);
+       });
+   }
+
+    // Get current school year
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+
+    console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
+
+    // First, load current year immediately and show it
+    statusTextGraph.text(`Loading current year (${currentSchoolYear}-${currentSchoolYear + 1})...`);
+
+    fetchEvaluationsForYear(currentSchoolYear)
+      .then((results) => {
+        console.log(`[BetterResults] Loaded current year data: ${results.length} results`);
+
+        // Add current year to selector
+        yearSelectGraph.empty();
+        const currentYearOption = $("<option>")
+          .attr("value", currentSchoolYear)
+          .text(`${currentSchoolYear}-${currentSchoolYear + 1} (${results.filter(r => r.type === "normal").length} grades)`);
+        yearSelectGraph.append(currentYearOption);
+        yearSelectGraph.val(currentSchoolYear);
+
+        // Start loading other years in the background
+        findAvailableYears()
+          .then(availableYears => {
+            console.log(`[BetterResults] Found ${availableYears.length} total years with grades:`, availableYears);
+
+            // Update selector with all available years
+            yearSelectGraph.empty();
+            availableYears.forEach(yearData => {
+              const option = $("<option>")
+                .attr("value", yearData.year)
+                .text(`${yearData.year}-${yearData.year + 1} (${yearData.count} grades)`);
+              yearSelectGraph.append(option);
+            });
+
+            // Keep current year selected
+            yearSelectGraph.val(currentSchoolYear);
+            statusTextGraph.text(`Found ${availableYears.length} years with grades`);
+          })
+          .catch(error => {
+            console.error("[BetterResults] Error loading additional years:", error);
+            statusTextGraph.text(`Loaded current year (${currentSchoolYear}-${currentSchoolYear + 1})`);
+          });
+
+        // Process and display current year data immediately
+        return results;
+      })
+      .then((results) => {
+      let data = {};
       let latestPeriod = null;
 
       // Parse Smartschool JSON
@@ -3990,16 +4153,182 @@ function MakeGraph() {
           updateSubjectsAndChart();
         }
 
-        modal.append(settingsButton, periodLabel, periodButtons, subjectLabel, subjectButtons, chartTitle, chartContainer);
+         modal.append(yearSelectorContainerGraph, settingsButton, periodLabel, periodButtons, subjectLabel, subjectButtons, chartTitle, chartContainer);
 
         // Initialize with no subject selected and show message
         selectedSubject = null;
         chartContainer.html("<p style='text-align: center; padding: 2rem; color: #666; font-style: italic;'>Please select a subject to start viewing the chart</p>");
         chartTitle.text("");
 
-       // Add modal to body
-       $("body").append(settingsModalBg);
-      loading.replaceWith(modal);
+        // Add modal to body
+        $("body").append(settingsModalBg);
+
+        // Apply button handler for year selection in graph
+        applyYearBtnGraph.on("click", function() {
+          const selectedYear = parseInt(yearSelectGraph.val());
+          if (!selectedYear) {
+            alert("Please select a year");
+            return;
+          }
+
+          // Update status text
+          statusTextGraph.text(`Loading data for ${selectedYear}-${selectedYear + 1}...`);
+
+          // Disable button during loading
+          applyYearBtnGraph.prop("disabled", true).text("Loading...");
+
+          // Fetch data for selected year
+          fetchEvaluationsForYear(selectedYear)
+            .then(newResults => {
+              if (newResults.length === 0) {
+                statusTextGraph.text(`No grades found for ${selectedYear}-${selectedYear + 1}`);
+                chartContainer.html("<p>No results found for the selected year</p>");
+                chartTitle.text("");
+                subjectButtons.empty();
+                return;
+              }
+
+              // Update status with count
+              const gradeCount = newResults.filter(r => r.type === "normal").length;
+              statusTextGraph.text(`Loaded ${gradeCount} grades for ${selectedYear}-${selectedYear + 1}`);
+
+              // Process new results
+              const newData = {};
+              let newLatestPeriod = null;
+
+              newResults.forEach((res) => {
+                if (res.type !== "normal") return;
+
+                const period = res.period.name;
+                newLatestPeriod ??= period;
+                newData[period] ??= {};
+                res.courses.forEach((course) => {
+                  const name = course.name;
+                  newData[period][name] ??= [];
+                  newData[period][name].push({
+                    date: res.date,
+                    name: res.name,
+                    graphic: res.graphic,
+                  });
+                });
+              });
+
+              // Update the global variables
+              data = newData;
+              latestPeriod = newLatestPeriod;
+
+              // Clear selections
+              selectedPeriods.clear();
+              selectedSubject = null;
+
+              // Update period buttons
+              periodButtons.empty();
+              Object.keys(data).reverse().forEach(periodName => {
+                const button = $("<button>")
+                  .addClass("period-button-graph")
+                  .text(periodName)
+                  .attr("data-period", periodName)
+                  .data("period", periodName)
+                  .css({
+                    padding: "0.5rem 1rem",
+                    border: "2px solid #ddd",
+                    borderRadius: "4px",
+                    backgroundColor: "white",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease"
+                  })
+                  .hover(
+                    function() {
+                      // Only apply hover effect if button is not currently selected
+                      if ($(this).css('backgroundColor') !== 'rgb(0, 123, 255)' &&
+                          !$(this).hasClass('period-button-initial-selected')) {
+                        $(this).css({
+                          backgroundColor: "#e7f3ff",
+                          borderColor: "#007bff",
+                          color: "#004085"
+                        });
+                      }
+                    },
+                    function() {
+                      // Only apply default styling if button is not currently selected
+                      if ($(this).css('backgroundColor') !== 'rgb(0, 123, 255)' &&
+                          !$(this).hasClass('period-button-initial-selected')) {
+                        $(this).css({
+                          backgroundColor: "white",
+                          borderColor: "#ddd",
+                          color: "black"
+                        });
+                      }
+                    }
+                  )
+                  .on("click", function() {
+                    const $btn = $(this);
+                    const period = $btn.data("period");
+
+                    // Prevent rapid clicking
+                    if (isProcessingClickGraph) {
+                      console.log(`[BetterResults] Ignoring rapid click for graph period: ${period}`);
+                      return;
+                    }
+
+                    isProcessingClickGraph = true;
+                    console.log(`[BetterResults] Graph button clicked for period: ${period}`);
+
+                    // Add visual feedback - reduce opacity and change cursor
+                    $btn.css({
+                      opacity: 0.7,
+                      cursor: 'not-allowed',
+                      pointerEvents: 'none'
+                    });
+
+                    // Remove initial-selected class from all buttons when user interacts
+                    $('.period-button-graph').removeClass('period-button-initial-selected');
+
+                    // Update backend state
+                    if (selectedPeriods.has(period)) {
+                     selectedPeriods.delete(period);
+                    } else {
+                     selectedPeriods.add(period);
+                    }
+
+                    // Sync CSS with backend state
+                    syncGraphButtonStates();
+
+                    // Update subjects and chart with small delay to prevent race conditions
+                    setTimeout(() => {
+                      updateSubjectsAndChart();
+                      isProcessingClickGraph = false;
+                      // Restore visual feedback
+                      $btn.css({
+                        opacity: 1,
+                        cursor: 'pointer',
+                        pointerEvents: 'auto'
+                      });
+                    }, 50);
+                  });
+
+                periodButtons.append(button);
+              });
+
+              // Select latest period by default
+              if (newLatestPeriod && data[newLatestPeriod]) {
+                selectedPeriods.add(newLatestPeriod);
+                syncGraphButtonStates();
+                updateSubjectsAndChart();
+              }
+            })
+            .catch(error => {
+              console.error("[BetterResults] Error fetching year data:", error);
+              statusTextGraph.text(`Error loading data for ${selectedYear}-${selectedYear + 1}`);
+              alert("Error loading data: " + error.message);
+            })
+            .finally(() => {
+              // Re-enable button
+              applyYearBtnGraph.prop("disabled", false).text("Apply");
+            });
+        });
+
+       loading.replaceWith(modal);
 
     })
     .catch((error) => {
@@ -4339,6 +4668,60 @@ const GRAPH_CSS = `/* --- GENERAL --- */
   flex-direction: column;
   height: 100%;
   width: 100%;
+}
+
+/* Year selector for graph */
+#year-selector-container-graph {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+#year-selector-graph {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+}
+
+#apply-year-btn-graph {
+  padding: 5px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+#apply-year-btn-graph:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#apply-year-btn-graph:active {
+  transform: translateY(0);
+}
+
+#apply-year-btn-graph:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+#year-selector-status-graph {
+  font-size: 12px;
+  color: #666;
+  margin-left: 10px;
+  font-style: italic;
 }
 
 /* Graph controls */
