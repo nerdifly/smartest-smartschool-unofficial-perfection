@@ -538,51 +538,169 @@ function setupURLChangeDetection() {
 /* -------------------------------------------------------------------------- */
 
 function MakeGrid() {
-  const loading = $("<h3>").text("Loading…");
-  
-  const filterToggleBtn = $("<button>")
-    .attr("id", "filter-toggle-btn")
-    .text("🔍 Show Date Filter")
-    .addClass("period_button-grid");
-  
-       const filterContainer = $("<div>")
-     .attr("id", "filter-container-grid")
+   const loading = $("<h3>").text("Loading…");
 
-   const dateInput = $("<input>").attr({
-     type: "date",
-     id: "date-filter-input"
-   });
+   // Year selector container
+   const yearSelectorContainer = $("<div>")
+     .attr("id", "year-selector-container")
+     .css({
+       display: "flex",
+       alignItems: "center",
+       gap: "10px",
+       marginBottom: "10px"
+     });
 
-   const filterTypeSelect = $("<select>").attr("id", "filter-type-select");
-   filterTypeSelect.append($("<option>").attr("value", "before").text("Before"));
-   filterTypeSelect.append($("<option>").attr("value", "after").text("After"));
+   // Year selector dropdown
+   const yearSelect = $("<select>")
+     .attr("id", "year-selector")
+     .css({
+       padding: "5px 10px",
+       borderRadius: "4px",
+       border: "1px solid #ddd"
+     });
 
-   const applyFilterBtn = $("<button>")
-     .attr("id", "apply-filter-btn")
-     .text("Apply Filter")
-     .addClass("period_button-grid");
+   // Apply button
+   const applyYearBtn = $("<button>")
+     .attr("id", "apply-year-btn")
+     .text("Apply")
+     .addClass("period_button-grid")
+     .css({
+       padding: "5px 15px",
+       backgroundColor: "#007bff",
+       color: "white",
+       border: "none",
+       borderRadius: "4px",
+       cursor: "pointer"
+     });
 
-   const clearFilterBtn = $("<button>")
-     .attr("id", "clear-filter-btn")
-     .text("Clear Filter")
-     .addClass("period_button-grid");
+   // Status text
+   const statusText = $("<span>")
+     .attr("id", "year-selector-status")
+     .text("Loading years...")
+     .css({
+       fontSize: "12px",
+       color: "#666",
+       marginLeft: "10px"
+     });
 
-   filterContainer.append(
-     $("<span>").text("Filter results: "),
-     filterTypeSelect,
-     dateInput,
-     applyFilterBtn,
-     clearFilterBtn
+   yearSelectorContainer.append(
+     $("<span>").text("Select Year: "),
+     yearSelect,
+     applyYearBtn,
+     statusText
    );
 
-  fetch("/results/api/v1/evaluations?itemsOnPage=500")
-    .then((r) => r.json())
-    .then((results) => {
-      /* Structure: { [period]: { [course]: result[] } } */
-      const data = {};
-      const courseIcons = {};
-      let latestPeriod = null;
-      let allResults = [];
+   // Function to fetch evaluations for a specific year
+   function fetchEvaluationsForYear(startYear) {
+     const startDate = `${startYear}-09-01`;
+     const endDate = `${startYear + 1}-08-31`;
+     const url = `/results/api/v1/evaluations?pageNumber=1&itemsOnPage=500&startDate=${startDate}&endDate=${endDate}`;
+
+     console.log(`[BetterResults] Fetching evaluations for year ${startYear}: ${url}`);
+     return fetch(url).then(r => r.json());
+   }
+
+   // Function to find available school years
+   function findAvailableYears() {
+     const currentDate = new Date();
+     const currentYear = currentDate.getFullYear();
+     const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+
+     // Determine current school year
+     // School year starts in September, so if we're before September, we're in the previous year
+     const currentSchoolYear = currentMonth < 9 ? currentYear - 1 : currentYear;
+
+     console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
+
+     const years = [];
+     let yearToCheck = currentSchoolYear;
+
+     // Try current year first
+     return fetchEvaluationsForYear(yearToCheck)
+       .then(results => {
+         const gradeCount = results.filter(r => r.type === "normal").length;
+         if (gradeCount > 0) {
+           years.push({ year: yearToCheck, count: gradeCount });
+         }
+
+         // Continue checking previous years until we find one with no grades
+         function checkNextYear() {
+           yearToCheck--;
+           return fetchEvaluationsForYear(yearToCheck)
+             .then(results => {
+               const gradeCount = results.filter(r => r.type === "normal").length;
+               if (gradeCount > 0) {
+                 years.push({ year: yearToCheck, count: gradeCount });
+                 return checkNextYear(); // Continue checking
+               } else {
+                 // No more grades found, stop here
+                 return years;
+               }
+             });
+         }
+
+         return checkNextYear();
+       })
+       .then(() => {
+         // Sort years descending (newest first)
+         return years.sort((a, b) => b.year - a.year);
+       });
+   }
+
+    // Get current school year and load it first
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+
+    console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
+
+    // First, load current year immediately and show it
+    statusText.text(`Loading current year (${currentSchoolYear}-${currentSchoolYear + 1})...`);
+
+    fetchEvaluationsForYear(currentSchoolYear)
+      .then((results) => {
+        console.log(`[BetterResults] Loaded current year data: ${results.length} results`);
+
+        // Add current year to selector
+        yearSelect.empty();
+        const currentYearOption = $("<option>")
+          .attr("value", currentSchoolYear)
+          .text(`${currentSchoolYear}-${currentSchoolYear + 1} (${results.filter(r => r.type === "normal").length} grades)`);
+        yearSelect.append(currentYearOption);
+        yearSelect.val(currentSchoolYear);
+
+        // Start loading other years in the background
+        findAvailableYears()
+          .then(availableYears => {
+            console.log(`[BetterResults] Found ${availableYears.length} total years with grades:`, availableYears);
+
+            // Update selector with all available years
+            yearSelect.empty();
+            availableYears.forEach(yearData => {
+              const option = $("<option>")
+                .attr("value", yearData.year)
+                .text(`${yearData.year}-${yearData.year + 1} (${yearData.count} grades)`);
+              yearSelect.append(option);
+            });
+
+            // Keep current year selected
+            yearSelect.val(currentSchoolYear);
+            statusText.text(`Found ${availableYears.length} years with grades`);
+          })
+          .catch(error => {
+            console.error("[BetterResults] Error loading additional years:", error);
+            statusText.text(`Loaded current year (${currentSchoolYear}-${currentSchoolYear + 1})`);
+          });
+
+        // Process and display current year data immediately
+        return results;
+      })
+      .then((results) => {
+        /* Structure: { [period]: { [course]: result[] } } */
+        let data = {};
+        let courseIcons = {};
+        let latestPeriod = null;
+        let allResults = [];
 
       /* --- Parse Smartschool API payload -------------------------------- */
       results.forEach((res) => {
@@ -750,12 +868,12 @@ function MakeGrid() {
 
       const periodGrids = buildGridWithFilter();
       
-      /* --- Build the modal wrapper -------------------------------------- */
-      const modal = $("<div>").attr("id", "content-container-grid");
-      const periodButtons = $("<div>").attr("id", "period-buttons");
-      const mainGrid = $("<div>").attr("id", "period-container-grid");
-      
-      modal.append(filterContainer);
+       /* --- Build the modal wrapper -------------------------------------- */
+       const modal = $("<div>").attr("id", "content-container-grid");
+       const periodButtons = $("<div>").attr("id", "period-buttons");
+       const mainGrid = $("<div>").attr("id", "period-container-grid");
+
+       modal.append(yearSelectorContainer);
 
         // Move selectedPeriods to outer scope so it can be accessed by createCombinedGrid
         let selectedPeriods = new Set();
@@ -887,13 +1005,7 @@ function MakeGrid() {
 
           periodButtons.append(periodLabel, periodButtonsContainer);
 
-          function loadCombinedGrid() {
-            mainGrid.empty();
 
-            // Create combined table with original grid design
-            const combinedTable = createCombinedGrid();
-            mainGrid.append(combinedTable);
-          }
 
           // Initialize with latest period selected
           if (latestPeriod && grids[latestPeriod]) {
@@ -909,11 +1021,17 @@ function MakeGrid() {
 
             loadCombinedGrid();
           }
-        }
-      
+         }
 
+         function loadCombinedGrid() {
+           mainGrid.empty();
 
-        function createCombinedGrid() {
+           // Create combined table with original grid design
+           const combinedTable = createCombinedGrid();
+           mainGrid.append(combinedTable);
+         }
+
+         function createCombinedGrid() {
           if (selectedPeriods.size === 0) {
             return $("<p>").text("Please select at least one period.");
           }
@@ -1395,9 +1513,93 @@ function MakeGrid() {
            showExportSelectionPopup(null, null, true);
 
            // Get the current period and course data from the API response
-           fetch("/results/api/v1/evaluations?itemsOnPage=500")
-             .then((r) => r.json())
-             .then((results) => {
+   // Function to fetch evaluations for a specific year
+   function fetchEvaluationsForYear(startYear) {
+     const startDate = `${startYear}-09-01`;
+     const endDate = `${startYear + 1}-08-31`;
+     const url = `/results/api/v1/evaluations?pageNumber=1&itemsOnPage=500&startDate=${startDate}&endDate=${endDate}`;
+
+     console.log(`[BetterResults] Fetching evaluations for year ${startYear}: ${url}`);
+     return fetch(url).then(r => r.json());
+   }
+
+   // Function to find available school years
+   function findAvailableYears() {
+     const currentDate = new Date();
+     const currentYear = currentDate.getFullYear();
+     const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11
+
+     // Determine current school year
+     // School year starts in September, so if we're before September, we're in the previous year
+     const currentSchoolYear = currentMonth < 9 ? currentYear - 1 : currentYear;
+
+     console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
+
+     const years = [];
+     let yearToCheck = currentSchoolYear;
+
+     // Try current year first
+     return fetchEvaluationsForYear(yearToCheck)
+       .then(results => {
+         const gradeCount = results.filter(r => r.type === "normal").length;
+         if (gradeCount > 0) {
+           years.push({ year: yearToCheck, count: gradeCount });
+         }
+
+         // Continue checking previous years until we find one with no grades
+         function checkNextYear() {
+           yearToCheck--;
+           return fetchEvaluationsForYear(yearToCheck)
+             .then(results => {
+               const gradeCount = results.filter(r => r.type === "normal").length;
+               if (gradeCount > 0) {
+                 years.push({ year: yearToCheck, count: gradeCount });
+                 return checkNextYear(); // Continue checking
+               } else {
+                 // No more grades found, stop here
+                 return years;
+               }
+             });
+         }
+
+         return checkNextYear();
+       })
+       .then(() => {
+         // Sort years descending (newest first)
+         return years.sort((a, b) => b.year - a.year);
+       });
+   }
+
+   // Load years and populate selector
+   findAvailableYears()
+     .then(availableYears => {
+       console.log(`[BetterResults] Found ${availableYears.length} years with grades:`, availableYears);
+
+       // Populate year selector
+       yearSelect.empty();
+       availableYears.forEach(yearData => {
+         const option = $("<option>")
+           .attr("value", yearData.year)
+           .text(`${yearData.year}-${yearData.year + 1} (${yearData.count} grades)`);
+         yearSelect.append(option);
+       });
+
+       // Set current year as selected if available
+       const currentDate = new Date();
+       const currentMonth = currentDate.getMonth() + 1;
+       const currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+
+       if (availableYears.find(y => y.year === currentSchoolYear)) {
+         yearSelect.val(currentSchoolYear);
+       }
+
+       statusText.text(`Found ${availableYears.length} years with grades`);
+
+       // Now fetch data for the selected year
+       const selectedYear = parseInt(yearSelect.val());
+       return fetchEvaluationsForYear(selectedYear);
+     })
+     .then((results) => {
                console.log("[BetterResults] Fetched evaluation data:", results.length, "results");
 
                // Structure: { [period]: { [course]: result[] } }
@@ -2222,61 +2424,89 @@ function MakeGrid() {
 
          modal.append(periodButtons, mainGrid, exportButton);
       
-       applyFilterBtn.on("click", function() {
-         const filterDate = dateInput.val();
-         if (!filterDate) {
-           alert("Please select a date for filtering");
-           return;
-         }
+        // Apply button handler for year selection
+        applyYearBtn.on("click", function() {
+          const selectedYear = parseInt(yearSelect.val());
+          if (!selectedYear) {
+            alert("Please select a year");
+            return;
+          }
 
-         const filterType = filterTypeSelect.val();
+          // Update status text
+          statusText.text(`Loading data for ${selectedYear}-${selectedYear + 1}...`);
 
-         const filteredResults = allResults.filter(res => {
-           if (filterType === "before") {
-             return res.date <= filterDate;
-           } else {
-             return res.date >= filterDate;
-           }
-         });
+          // Disable button during loading
+          applyYearBtn.prop("disabled", true).text("Loading...");
 
-         if (filteredResults.length === 0) {
-           alert("No results found with the selected filter");
-           return;
-         }
+          // Fetch data for selected year
+          fetchEvaluationsForYear(selectedYear)
+            .then(newResults => {
+              if (newResults.length === 0) {
+                statusText.text(`No grades found for ${selectedYear}-${selectedYear + 1}`);
+                $('#period-container-grid').empty().append($("<p>").text("No results found for the selected year"));
+                return;
+              }
 
-         const newPeriodGrids = buildGridWithFilter(filteredResults);
+              // Update status with count
+              const gradeCount = newResults.filter(r => r.type === "normal").length;
+              statusText.text(`Loaded ${gradeCount} grades for ${selectedYear}-${selectedYear + 1}`);
 
-         updatePeriodButtons(newPeriodGrids);
+              // Process new results
+              const newData = {};
+              const newCourseIcons = {};
+              let newLatestPeriod = null;
+              const newAllResults = [];
 
-           // After filtering, select the latest available period by default
-           const availablePeriods = Object.keys(newPeriodGrids);
-           if (availablePeriods.length > 0) {
-             const latestPeriod = availablePeriods[availablePeriods.length - 1];
-             // Update selectedPeriods set
-             selectedPeriods.clear();
-             selectedPeriods.add(latestPeriod);
-             // Sync all button states
-             syncButtonStates();
-             loadCombinedGrid();
-           } else {
-             $('#period-container-grid').empty().append($("<p>").text("No results match your filter criteria"));
-           }
-       });
-      
-        clearFilterBtn.on("click", function() {
-          dateInput.val("");
+              newResults.forEach((res) => {
+                if (res.type !== "normal") return;
 
-          updatePeriodButtons(periodGrids);
+                newAllResults.push(res);
 
-           // Restore the latest period selection after clearing filter
-           if (latestPeriod && periodGrids[latestPeriod]) {
-             // Update selectedPeriods set
-             selectedPeriods.clear();
-             selectedPeriods.add(latestPeriod);
-             // Sync all button states
-             syncButtonStates();
-             loadCombinedGrid();
-           }
+                const period = res.period.name;
+                newLatestPeriod ??= period;
+                newData[period] ??= {};
+
+                res.courses.forEach((course) => {
+                  const name = course.name;
+                  newData[period][name] ??= [];
+                  newData[period][name].push({
+                    date: res.date,
+                    name: res.name,
+                    graphic: res.graphic,
+                  });
+                  newCourseIcons[name] = course.graphic;
+                });
+              });
+
+              // Build new grids
+              const newPeriodGrids = buildPeriodGrids(newData, newCourseIcons);
+
+              // Update the global variables
+              data = newData;
+              courseIcons = newCourseIcons;
+              latestPeriod = newLatestPeriod;
+              allResults = newAllResults;
+
+              // Update period buttons
+              updatePeriodButtons(newPeriodGrids);
+
+              // Select latest period by default
+              if (newLatestPeriod && newPeriodGrids[newLatestPeriod]) {
+                selectedPeriods.clear();
+                selectedPeriods.add(newLatestPeriod);
+                syncButtonStates();
+                loadCombinedGrid();
+              }
+            })
+            .catch(error => {
+              console.error("[BetterResults] Error fetching year data:", error);
+              statusText.text(`Error loading data for ${selectedYear}-${selectedYear + 1}`);
+              alert("Error loading data: " + error.message);
+            })
+            .finally(() => {
+              // Re-enable button
+              applyYearBtn.prop("disabled", false).text("Apply");
+            });
         });
 
        loading.replaceWith(modal);
