@@ -1,0 +1,774 @@
+#result-table-grid #disclamer-grid {
+  border: none !important;
+  color: red;
+  font-weight: bold;
+  position: relative;
+}
+
+#disclamer-grid:hover::before {
+  visibility: visible;
+  opacity: 1;
+}
+
+#disclamer-grid::before {
+  z-index: 1;
+  content: "Deze totalen kunnen afwijken van uw werkelijke resultaten doordat niet altijd alle gegevens gekend zijn.";
+  position: absolute;
+  left: -20rem;
+  border: 3px solid red;
+  padding: 0.2rem;
+  border-radius: 3px;
+  background-color: white;
+  width: 20rem;
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s, opacity 0.5s linear;
+}
+
+#details-grid {
+  position: relative;
+}
+
+#result-table-grid .hidden-cell-grid {
+  border: none !important;
+}
+
+.period_button-grid {
+  background-color: #007bff;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  color: #FFFFFF;
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.period_button-grid:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.period_button-grid:active {
+  background-color: #004085;
+  transform: translateY(0);
+}
+
+.total-grid {
+  font-weight: bold;
+}
+
+.is-low-grid {
+  color: red !important;
+}
+
+#table-container-grid {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+#period-grid {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#period-container-grid {
+  flex: 1;
+  min-height: 0;
+}
+
+#content-container-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+#result-table-grid {
+  margin-top: 1rem;
+  border: 0px;
+}
+
+#result-table-grid th {
+  text-align: left;
+}
+
+#result-table-grid td {
+  text-align: center;
+}
+
+#result-table-grid th,
+#result-table-grid td {
+  border: 1px solid #dee2e6 !important;
+  padding: 0.5rem;
+  min-width: 5.5rem;
+}
+
+#modal-background-grid {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+
+#modal-content-grid {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 20px 0 #222;
+  display: none;
+  padding: 20px;
+  position: fixed;
+  z-index: 1000;
+  left: 10%;
+  top: 10%;
+  width: 80%;
+  height: 80%;
+}
+
+#modal-background-grid.active,
+#modal-content-grid.active {
+  display: block;
+}
+
+#modal-close-grid {
+  font-family: 'Poppins', sans-serif;
+  color: rgb(100, 100, 100);
+  padding: 0.6rem;
+  text-align: center;
+  transition: all 200ms ease;
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  background: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.4rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#modal-close-grid:hover {
+  background-color: #f8f9fa;
+  border-color: #dc3545;
+  color: #dc3545;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#modal-close-grid:active {
+  background-color: #f5f5f5;
+  border-color: #bd2130;
+  color: #bd2130;
+  transform: scale(0.95);
+}
+
+/* --- PERIOD SELECTION FOR GRID --- */
+#period-selection-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+#period-checkboxes-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.period-checkbox-wrapper-grid {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.period-checkbox-grid {
+  margin: 0;
+}
+
+#period-controls-grid {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.period-control-button-grid {
+  background-color: #28a745;
+  border: 2px solid #28a745;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.period-control-button-grid:hover {
+  background-color: #218838;
+  border-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.period-control-button-grid:active {
+  transform: translateY(0);
+}
+
+#reset-periods-grid {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+#reset-periods-grid:hover {
+  background-color: #c82333;
+  border-color: #c82333;
+}
+
+/* Original grid design - combined into one table */
+#combined-table-container {
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  max-width: 100%;
+}
+
+#combined-result-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 800px;
+  font-size: 0.9rem;
+}
+
+#combined-result-table th,
+#combined-result-table td {
+  border: 1px solid #dee2e6;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+#combined-result-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.course-row {
+  border-bottom: 1px solid #dee2e6;
+  transition: background-color 0.2s ease;
+}
+
+.course-row:hover {
+  background-color: #f8f9fa;
+}
+
+.course-row:nth-child(even) {
+  background-color: #fafbfc;
+}
+
+/* Sticky columns - just like original grid */
+#combined-result-table th:first-child,
+#combined-result-table td:first-child {
+  position: sticky;
+  left: 0;
+  background-color: white;
+  z-index: 10;
+  text-align: left;
+  font-weight: normal;
+}
+
+#combined-result-table th:last-child,
+#combined-result-table td:last-child {
+  position: sticky;
+  right: 0;
+  background-color: white;
+  z-index: 10;
+  font-weight: bold;
+}
+
+/* Original grid evaluation cell styling */
+#combined-result-table td[id="details-grid"] {
+  cursor: pointer;
+  padding: 4px 8px;
+  position: relative;
+}
+
+/* JavaScript tooltip styles — inline JS creates the tooltip element (.grid-tooltip). Remove the old ::before/::after arrows and instead style the floating element so it matches the graph tooltip (rounded, green, subtle shadow). The JS still sets the exact background/text colours. */
+.grid-tooltip {
+  position: absolute !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #000 !important;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  /* Use CSS variable --bg so the pseudo-element arrow can match the dynamically-set background color. Fallback to a translucent light green if the variable isn't set. */
+  background-color: var(--bg, rgba(59,214,61,0.9));
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  white-space: pre-line;
+  text-align: left;
+  line-height: 1.2;
+}
+
+/* Arrow that points to the cell. We position it on the left or right depending on where the tooltip is placed. The arrow color uses the same background via the --bg CSS variable. */
+.grid-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.grid-tooltip.arrow-right::after {
+  left: -8px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid var(--bg, rgba(59,214,61,0.9));
+}
+
+.grid-tooltip.arrow-left::after {
+  right: -8px;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 8px solid var(--bg, rgba(59,214,61,0.9));
+}
+
+/* Total column styling */
+.total-grid {
+  font-weight: bold;
+}
+
+/* Overall total row */
+.overall-total-row {
+  background-color: #e3f2fd !important;
+  border-top: 3px solid #2196f3 !important;
+  border-bottom: 2px solid #2196f3 !important;
+}
+
+.overall-total-row th {
+  background-color: #e3f2fd !important;
+  font-weight: bold !important;
+  font-size: 1.1em !important;
+  color: #1976d2 !important;
+}
+
+.overall-total-row td:last-child {
+  background-color: #fff !important;
+  border: 2px solid #2196f3 !important;
+  font-size: 1.2em !important;
+  color: #1976d2 !important;
+}
+
+/* Period buttons styling */
+.period-button-grid {
+  transition: all 0.2s ease;
+}
+
+.period-button-grid:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.period-button-grid:active {
+  transform: translateY(0);
+}
+
+/* Initially selected (latest) period styling - same as manual selection */
+.period-button-grid.period-button-initial-selected,
+.period-button-graph.period-button-initial-selected {
+  background-color: #007bff !important;
+  border-color: #007bff !important;
+  color: white !important;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* Year selector for grid */
+#year-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+#year-selector {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+}
+
+#apply-year-btn {
+  padding: 5px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+#apply-year-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#apply-year-btn:active {
+  transform: translateY(0);
+}
+
+#apply-year-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+#year-selector-status {
+  font-size: 12px;
+  color: #666;
+  margin-left: 10px;
+  font-style: italic;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  #filter-container-grid {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #year-selector-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #period-buttons-grid {
+    flex-direction: column;
+  }
+
+  .period-button-grid {
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+
+  #combined-result-table {
+    font-size: 0.8rem;
+  }
+
+  #combined-result-table th,
+  #combined-result-table td {
+    padding: 0.25rem;
+  }
+}
+
+/* Filter container styling */
+#filter-container-grid {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  flex-wrap: wrap;
+}
+
+#date-filter-input {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+#filter-type-select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+}
+
+#apply-filter-btn, #clear-filter-btn {
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
+  color: white;
+  border: 2px solid #28a745;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#clear-filter-btn {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+#apply-filter-btn:hover {
+  background-color: #218838;
+  border-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#clear-filter-btn:hover {
+  background-color: #c82333;
+  border-color: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#apply-filter-btn:active, #clear-filter-btn:active {
+  transform: translateY(0);
+}
+
+/* Grid export button styling */
+#grid-export-button {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+#grid-export-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#grid-export-button:active {
+  transform: scale(0.95);
+}
+
+/* Export menu styling */
+#grid-export-menu {
+  border: 1px solid #e0e0e0;
+  min-width: 200px; /* Wider to accommodate longer text */
+}
+
+#grid-export-menu button {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px; /* Slightly smaller for longer text */
+  font-weight: 400;
+  white-space: normal; /* Allow text wrapping */
+  word-wrap: break-word;
+}
+
+#grid-export-menu button:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* Export selection popup styling */
+#export-selection-overlay {
+  font-family: 'Poppins', sans-serif;
+}
+
+#export-selection-popup {
+  font-family: 'Poppins', sans-serif;
+}
+
+#export-selection-popup button {
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s ease;
+}
+
+#export-selection-popup button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Radio button styling */
+#export-selection-popup input[type="radio"] {
+  margin-right: 8px;
+  transform: scale(1.2);
+}
+
+#export-selection-popup label {
+  cursor: pointer;
+  user-select: none;
+}
+
+#export-selection-popup label:hover {
+  opacity: 0.8;
+}
+
+#date-filter-input {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+#filter-type-select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+}
+
+#apply-filter-btn, #clear-filter-btn {
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
+  color: white;
+  border: 2px solid #28a745;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#clear-filter-btn {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+#apply-filter-btn:hover {
+  background-color: #218838;
+  border-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#clear-filter-btn:hover {
+  background-color: #c82333;
+  border-color: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#apply-filter-btn:active, #clear-filter-btn:active {
+  transform: translateY(0);
+}
+
+/* Custom content area for integrated tabs */
+#custom-content-area {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  width: 100%;
+  height: calc(100vh - 200px);
+  overflow: auto;
+}
+
+/* Period buttons container for grid */
+#period-buttons-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Table container for grid */
+#table-container-grid {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+/* Result table for grid */
+#result-table-grid {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 600px;
+  font-size: 0.9rem;
+}
+
+/* Course evaluation cells */
+.c-1-combo--300, .c-2-combo--300, .c-3-combo--300, .c-4-combo--300 {
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Color classes for evaluations */
+.c-1-combo--300 { background-color: #ff0000; color: white; } /* Red */
+.c-2-combo--300 { background-color: #ffd531; color: black; } /* Yellow */
+.c-3-combo--300 { background-color: #3bd63d; color: white; } /* Light Green */
+.c-4-combo--300 { background-color: #2b8114; color: white; } /* Dark Green */
+
+/* Course name cells */
+.course-name-cell {
+  font-weight: bold;
+  text-align: left;
+  padding: 8px;
+}
+
+/* Total cells */
+.total-grid {
+  font-weight: bold;
+  background-color: #f8f9fa;
+}
+
+/* Low score styling */
+.is-low-grid {
+  color: red !important;
+  font-weight: bold;
+}
+
+/* Evaluation cells */
+.evaluation-cell {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.evaluation-cell:hover {
+  background-color: rgba(0,0,0,0.1);
+}
+
+/* Multi-evaluation cells */
+.multi-evaluation {
+  border-left: 2px solid #007bff;
+}
+
+/* Empty cells */
+.empty-cell {
+  background-color: #f8f9fa;
+}
+
+/* Overall total row */
+.overall-total-row {
+  background-color: #e3f2fd;
+  border-top: 2px solid #2196f3;
+}
+
+.overall-total-row th {
+  background-color: #e3f2fd;
+  font-weight: bold;
+  color: #1976d2;
+}
+
+.overall-total-value {
+  background-color: #fff;
+  border: 2px solid #2196f3;
+  font-size: 1.1em;
+  color: #1976d2;
+}

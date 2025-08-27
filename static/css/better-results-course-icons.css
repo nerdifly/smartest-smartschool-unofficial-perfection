@@ -1,0 +1,26 @@
+/* Course icon styles */
+.course-icon-container {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.course-icon {
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.course-name-cell {
+  min-width: 200px;
+}
+
+.course-icon-container span {
+  vertical-align: middle;
+}
+
+/* Ensure table cells can accommodate icons */
+#result-table-grid th.course-name-cell,
+#combined-result-table th {
+  padding: 8px;
+  text-align: left;
+}

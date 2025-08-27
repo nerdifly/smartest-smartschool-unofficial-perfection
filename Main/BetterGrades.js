@@ -12,6 +12,21 @@ let observer = new MutationObserver(callback);
 
 observer.observe(targetNode, { attributes: true, childList: true, subtree: true });
 
+// Load CSS file
+loadBetterGradesCSS();
+
+function loadBetterGradesCSS() {
+  const cssId = 'better-grades-css';
+  if (!document.getElementById(cssId)) {
+    const linkElement = $("<link>", {
+      id: cssId,
+      rel: "stylesheet",
+      href: chrome.runtime.getURL("static/css/better-grades.css")
+    }).appendTo("head");
+    console.log('[BetterGrades] CSS file loaded');
+  }
+}
+
 function main() {
     if ($('#gridview').length && !$('#gridview').find('input').length) {
         calculateTotalGrid();
@@ -73,7 +88,7 @@ function calculateTotalGrid() {
                 div.addClass('isLow');
             }
             div.text(totalToStr(total_numerator, total_denominator));
-            div.css('font-weight', 'Bold');
+            div.addClass('total-cell-bold');
         }
         row.append(div);
         row.width(row.width() + 70)

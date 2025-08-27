@@ -1,0 +1,216 @@
+/* --- GENERAL --- */
+#content-container-graph {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+/* Year selector for graph */
+#year-selector-container-graph {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+#year-selector-graph {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+}
+
+#apply-year-btn-graph {
+  padding: 5px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+#apply-year-btn-graph:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#apply-year-btn-graph:active {
+  transform: translateY(0);
+}
+
+#apply-year-btn-graph:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+#year-selector-status-graph {
+  font-size: 12px;
+  color: #666;
+  margin-left: 10px;
+  font-style: italic;
+}
+
+/* Graph controls */
+#period-buttons-graph, #subject-buttons-graph {
+  margin: 0.5rem 0 1rem 0;
+}
+
+.period-button-graph, .subject-button-graph {
+  transition: all 0.2s ease;
+}
+
+.period-button-graph:hover, .subject-button-graph:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#chart-title {
+  color: #333;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+/* Simple graph styling */
+
+/* --- SUBJECT CONTAINER --- */
+#subject-container-graph {
+  margin-top: 0.5rem;
+}
+
+/* Simple graph styling */
+
+/* --- INTEGRATED CONTENT --- */
+#content-container-graph {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+.selected-subject {
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+  color: white !important;
+}
+
+.selected-subject:hover {
+  background-color: #218838 !important;
+}
+
+/* Settings button - modern floating design */
+#graph-settings-button {
+  transition: all 0.2s ease;
+  backdropFilter: "blur(10px)";
+}
+
+#graph-settings-button:hover {
+  background-color: #f8f9fa !important;
+  color: #333 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  transform: scale(1.05) !important;
+}
+
+#graph-settings-button:active {
+  transform: scale(0.95) !important;
+}
+
+/* Settings modal styles */
+#graph-settings-modal-bg {
+  animation: fadeIn 0.2s ease;
+}
+
+#graph-settings-modal {
+  animation: slideIn 0.2s ease;
+}
+
+#graph-settings-modal select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 0.9rem;
+  minWidth: "120px";
+}
+
+#graph-settings-modal div {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: "#333";
+}
+
+#graph-settings-modal button {
+  transition: background-color 0.2s ease;
+}
+
+#graph-settings-modal button:hover {
+  opacity: 0.9;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Responsive modal */
+@media (max-width: 768px) {
+  #graph-settings-modal {
+    minWidth: "280px";
+    padding: "1.2rem";
+    top: "45%";
+  }
+
+  #graph-settings-button {
+    width: "40px !important";
+    height: "40px !important";
+    fontSize: "16px !important";
+    bottom: "15px !important";
+    right: "15px !important";
+  }
+
+  #graph-settings-modal select {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.55rem;
+  }
+
+  #graph-settings-modal div {
+    font-size: 0.85rem;
+  }
+}
+
+#graph-settings-button {
+  width: "44px";
+  height: "44px";
+  fontSize: "1.1rem";
+  top: "65px";
+  right: "12px";
+}
+
+#graph-settings-modal select {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.55rem;
+}
+
+#graph-settings-modal div {
+  font-size: 0.85rem;
+}
