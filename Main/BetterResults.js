@@ -4,6 +4,7 @@
 
 
 // MARK: observers
+// like in minecraft
 
 //so aperently smartschool likes to remove buttons so this will add them back every time they do 
 const wideToolbarObserver = new MutationObserver((mutations) => {
@@ -603,55 +604,74 @@ function MakeGrid() {
        });
    }
 
-    // Get current school year and load it first
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+     // Get current school year and load it first
+     const currentDate = new Date();
+     const currentMonth = currentDate.getMonth() + 1;
+     let currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+     let displayYear = currentSchoolYear; // Track which year we're actually displaying
 
-    console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
+     console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
 
-    // First, load current year immediately and show it
-    statusText.text(`Loading current year (${currentSchoolYear}-${currentSchoolYear + 1})...`);
+     // Function to load year data with fallback logic
+     function loadYearWithFallback(yearToLoad) {
+       statusText.text(`Loading year (${yearToLoad}-${yearToLoad + 1})...`);
 
-    fetchEvaluationsForYear(currentSchoolYear)
-      .then((results) => {
-        console.log(`[BetterResults] Loaded current year data: ${results.length} results`);
+       return fetchEvaluationsForYear(yearToLoad)
+         .then((results) => {
+           console.log(`[BetterResults] Loaded year ${yearToLoad} data: ${results.length} results`);
+           const gradeCount = results.filter(r => r.type === "normal").length;
 
-        // Add current year to selector
-        yearSelect.empty();
-        const currentYearOption = $("<option>")
-          .attr("value", currentSchoolYear)
-          .text(`${currentSchoolYear}-${currentSchoolYear + 1} (${results.filter(r => r.type === "normal").length} grades)`);
-        yearSelect.append(currentYearOption);
-        yearSelect.val(currentSchoolYear);
+           // If this is the current year and no grades found, try previous year
+           if (yearToLoad === currentSchoolYear && gradeCount === 0) {
+             console.log(`[BetterResults] No grades found for current year ${currentSchoolYear}, trying previous year`);
+             const previousYear = currentSchoolYear - 1;
+             displayYear = previousYear; // Update display year to previous year
 
-        // Start loading other years in the background
-        findAvailableYears()
-          .then(availableYears => {
-            console.log(`[BetterResults] Found ${availableYears.length} total years with grades:`, availableYears);
+             return loadYearWithFallback(previousYear);
+           }
 
-            // Update selector with all available years
-            yearSelect.empty();
-            availableYears.forEach(yearData => {
-              const option = $("<option>")
-                .attr("value", yearData.year)
-                .text(`${yearData.year}-${yearData.year + 1} (${yearData.count} grades)`);
-              yearSelect.append(option);
-            });
+           return { results, year: yearToLoad, gradeCount };
+         });
+     }
 
-            // Keep current year selected
-            yearSelect.val(currentSchoolYear);
-            statusText.text(`Found ${availableYears.length} years with grades`);
-          })
-          .catch(error => {
-            console.error("[BetterResults] Error loading additional years:", error);
-            statusText.text(`Loaded current year (${currentSchoolYear}-${currentSchoolYear + 1})`);
-          });
+     // Load data with fallback logic
+     loadYearWithFallback(currentSchoolYear)
+       .then(({ results, year, gradeCount }) => {
+         // Add the displayed year to selector
+         yearSelect.empty();
+         const yearOption = $("<option>")
+           .attr("value", year)
+           .text(`${year}-${year + 1} (${gradeCount} grades)`);
+         yearSelect.append(yearOption);
+         yearSelect.val(year);
 
-        // Process and display current year data immediately
-        return results;
-      })
-      .then((results) => {
+         // Start loading other years in the background
+         findAvailableYears()
+           .then(availableYears => {
+             console.log(`[BetterResults] Found ${availableYears.length} total years with grades:`, availableYears);
+
+             // Update selector with all available years
+             yearSelect.empty();
+             availableYears.forEach(yearData => {
+               const option = $("<option>")
+                 .attr("value", yearData.year)
+                 .text(`${yearData.year}-${yearData.year + 1} (${yearData.count} grades)`);
+               yearSelect.append(option);
+             });
+
+             // Keep the displayed year selected (could be fallback year)
+             yearSelect.val(displayYear);
+             statusText.text(`Found ${availableYears.length} years with grades`);
+           })
+           .catch(error => {
+             console.error("[BetterResults] Error loading additional years:", error);
+             statusText.text(`Loaded year (${displayYear}-${displayYear + 1})`);
+           });
+
+         // Process and display the loaded year data immediately
+         return { results, year, gradeCount };
+       })
+       .then(({ results, year, gradeCount }) => {
         /* Structure: { [period]: { [course]: result[] } } */
         let data = {};
         let courseIcons = {};
@@ -2551,27 +2571,46 @@ function MakeGraph() {
        });
    }
 
-    // Get current school year
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+     // Get current school year
+     const currentDate = new Date();
+     const currentMonth = currentDate.getMonth() + 1;
+     let currentSchoolYear = currentMonth < 9 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+     let displayYearGraph = currentSchoolYear; // Track which year we're actually displaying for graph
 
-    console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
+     console.log(`[BetterResults] Current school year: ${currentSchoolYear}`);
 
-    // First, load current year immediately and show it
-    statusTextGraph.text(`Loading current year (${currentSchoolYear}-${currentSchoolYear + 1})...`);
+     // Function to load year data with fallback logic for graph
+     function loadYearWithFallbackGraph(yearToLoad) {
+       statusTextGraph.text(`Loading year (${yearToLoad}-${yearToLoad + 1})...`);
 
-    fetchEvaluationsForYear(currentSchoolYear)
-      .then((results) => {
-        console.log(`[BetterResults] Loaded current year data: ${results.length} results`);
+       return fetchEvaluationsForYear(yearToLoad)
+         .then((results) => {
+           console.log(`[BetterResults] Loaded year ${yearToLoad} data: ${results.length} results`);
+           const gradeCount = results.filter(r => r.type === "normal").length;
 
-        // Add current year to selector
-        yearSelectGraph.empty();
-        const currentYearOption = $("<option>")
-          .attr("value", currentSchoolYear)
-          .text(`${currentSchoolYear}-${currentSchoolYear + 1} (${results.filter(r => r.type === "normal").length} grades)`);
-        yearSelectGraph.append(currentYearOption);
-        yearSelectGraph.val(currentSchoolYear);
+           // If this is the current year and no grades found, try previous year
+           if (yearToLoad === currentSchoolYear && gradeCount === 0) {
+             console.log(`[BetterResults] No grades found for current year ${currentSchoolYear}, trying previous year for graph`);
+             const previousYear = currentSchoolYear - 1;
+             displayYearGraph = previousYear; // Update display year to previous year
+
+             return loadYearWithFallbackGraph(previousYear);
+           }
+
+           return { results, year: yearToLoad, gradeCount };
+         });
+     }
+
+     // Load data with fallback logic for graph
+     loadYearWithFallbackGraph(currentSchoolYear)
+       .then(({ results, year, gradeCount }) => {
+         // Add the displayed year to selector
+         yearSelectGraph.empty();
+         const yearOption = $("<option>")
+           .attr("value", year)
+           .text(`${year}-${year + 1} (${gradeCount} grades)`);
+         yearSelectGraph.append(yearOption);
+         yearSelectGraph.val(year);
 
         // Start loading other years in the background
         findAvailableYears()
@@ -2587,24 +2626,24 @@ function MakeGraph() {
               yearSelectGraph.append(option);
             });
 
-            // Keep current year selected
-            yearSelectGraph.val(currentSchoolYear);
-            statusTextGraph.text(`Found ${availableYears.length} years with grades`);
-          })
-          .catch(error => {
-            console.error("[BetterResults] Error loading additional years:", error);
-            statusTextGraph.text(`Loaded current year (${currentSchoolYear}-${currentSchoolYear + 1})`);
-          });
+             // Keep the displayed year selected (could be fallback year)
+             yearSelectGraph.val(displayYearGraph);
+             statusTextGraph.text(`Found ${availableYears.length} years with grades`);
+           })
+           .catch(error => {
+             console.error("[BetterResults] Error loading additional years:", error);
+             statusTextGraph.text(`Loaded year (${displayYearGraph}-${displayYearGraph + 1})`);
+           });
 
-        // Process and display current year data immediately
-        return results;
-      })
-      .then((results) => {
-      let data = {};
-      let latestPeriod = null;
+         // Process and display the loaded year data immediately
+         return { results, year, gradeCount };
+       })
+       .then(({ results, year, gradeCount }) => {
+       let data = {};
+       let latestPeriod = null;
 
-      // Parse Smartschool JSON
-      results.forEach((res) => {
+       // Parse Smartschool JSON
+       results.forEach((res) => {
         if (res.type !== "normal") return;
         const period = res.period.name;
         latestPeriod ??= period;
