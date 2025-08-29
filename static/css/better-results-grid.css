@@ -1,8 +1,38 @@
-#result-table-grid #disclamer-grid {
-  border: none !important;
-  color: red;
+#disclamer-grid {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
   font-weight: bold;
+  cursor: help;
   position: relative;
+  transition: all 0.2s ease;
+  border: 2px solid #ffcdd2 !important;
+}
+
+#disclamer-grid:hover {
+  background-color: #ffcdd2 !important;
+  border-color: #e57373 !important;
+  color: #b71c1c !important;
+}
+
+#disclamer-grid::before {
+  content: "Deze totalen kunnen afwijken van uw werkelijke resultaten doordat niet altijd alle gegevens gekend zijn.";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border: 2px solid #c62828;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: #333;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s, opacity 0.3s ease;
+  margin-top: 5px;
 }
 
 #disclamer-grid:hover::before {
@@ -10,19 +40,22 @@
   opacity: 1;
 }
 
-#disclamer-grid::before {
-  z-index: 1;
-  content: "Deze totalen kunnen afwijken van uw werkelijke resultaten doordat niet altijd alle gegevens gekend zijn.";
+#disclamer-grid::after {
+  content: "";
   position: absolute;
-  left: -20rem;
-  border: 3px solid red;
-  padding: 0.2rem;
-  border-radius: 3px;
-  background-color: white;
-  width: 20rem;
+  top: 100%;
+  right: 15px;
+  border: 5px solid transparent;
+  border-bottom-color: white;
+  margin-top: -2px;
   visibility: hidden;
   opacity: 0;
-  transition: visibility 0s, opacity 0.5s linear;
+  transition: visibility 0s, opacity 0.3s ease;
+}
+
+#disclamer-grid:hover::after {
+  visibility: visible;
+  opacity: 1;
 }
 
 #details-grid {

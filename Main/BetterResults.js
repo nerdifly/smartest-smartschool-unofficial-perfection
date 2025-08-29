@@ -959,7 +959,8 @@ function MakeGrid() {
             periodButtonsContainer.append(button);
           });
 
-          periodButtons.append(periodLabel, periodButtonsContainer);
+           periodButtons.append(periodLabel, periodButtonsContainer);
+
 
 
 
@@ -1042,20 +1043,29 @@ function MakeGrid() {
              }));
            }
 
-          // Add total column
-          headerRow.append($("<th>").text("Total").css({
-            position: "sticky",
-            right: 0,
-            backgroundColor: "#f8f9fa",
-            zIndex: 10,
-            fontWeight: "bold",
-            minWidth: "80px",
-            textAlign: "center"
-          }));
+           // Add total column with disclaimer styling
+           const totalHeader = $("<th>")
+             .attr("id", "disclamer-grid")
+             .text("Total")
+             .css({
+               position: "sticky",
+               right: 0,
+               backgroundColor: "#ffebee",
+               zIndex: 10,
+               fontWeight: "bold",
+               minWidth: "80px",
+               textAlign: "center",
+               cursor: "help",
+               position: "relative",
+               border: "2px solid #ffcdd2",
+               color: "#c62828"
+             });
 
-          table.append(headerRow);
+           headerRow.append(totalHeader);
 
-          // Create data rows for each course - just like original grid
+           table.append(headerRow);
+
+           // Create data rows for each course - just like original grid
           Array.from(allCourses).sort().forEach(courseName => {
             const row = $("<tr>").addClass("course-row");
 
