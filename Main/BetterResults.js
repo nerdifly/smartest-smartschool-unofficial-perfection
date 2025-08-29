@@ -496,11 +496,14 @@ function setupURLChangeDetection() {
 
 function MakeGrid() {
    const loading = $("<div>").css({
+     position: "fixed",
+     top: "50%",
+     left: "50%",
+     transform: "translate(-50%, -50%)",
      textAlign: "center",
-     padding: "20px"
+     zIndex: 9999
    }).html(`
-     <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 48px; height: 48px;" alt="Loading...">
-     <h3 style="margin-top: 10px;">Loading…</h3>
+     <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 72px; height: 72px;" alt="Loading...">
    `);
 
    // Year selector container
@@ -1569,18 +1572,19 @@ function MakeGrid() {
              header.text("Select Data to Export");
            }
 
-            // Loading state
-            if (isLoading) {
-              const loadingSpinner = $("<div>")
-                .css({
-                  textAlign: "center",
-                  padding: "40px",
-                  color: "#666"
-                })
-                .html(`
-                  <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 64px; height: 64px; margin: 0 auto 20px;" alt="Loading...">
-                  <div>Fetching your evaluation data...</div>
-                `);
+             // Loading state
+             if (isLoading) {
+               const loadingSpinner = $("<div>")
+                 .css({
+                   display: "flex",
+                   alignItems: "center",
+                   justifyContent: "center",
+                   padding: "40px",
+                   color: "#666"
+                 })
+                  .html(`
+                    <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 96px; height: 96px;" alt="Loading...">
+                  `);
 
               popup.append(header, loadingSpinner);
               overlay.append(popup);
@@ -2313,8 +2317,7 @@ function MakeGrid() {
 
           // Disable button during loading
           applyYearBtn.prop("disabled", true).html(`
-            <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 16px; height: 16px; margin-right: 5px; vertical-align: middle;" alt="Loading...">
-            Loading...
+            <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 24px; height: 24px; vertical-align: middle;" alt="Loading...">
           `);
 
           // Fetch data for selected year
@@ -2457,11 +2460,14 @@ function colourFor(y) {
 
 function MakeGraph() {
    const loading = $("<div>").css({
+     position: "fixed",
+     top: "50%",
+     left: "50%",
+     transform: "translate(-50%, -50%)",
      textAlign: "center",
-     padding: "20px"
+     zIndex: 9999
    }).html(`
-     <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 48px; height: 48px;" alt="Loading...">
-     <h3 style="margin-top: 10px;">Loading…</h3>
+     <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 72px; height: 72px;" alt="Loading...">
    `);
 
    // Year selector container for graph
@@ -3373,8 +3379,7 @@ function MakeGraph() {
 
           // Disable button during loading
           applyYearBtnGraph.prop("disabled", true).html(`
-            <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 16px; height: 16px; margin-right: 5px; vertical-align: middle;" alt="Loading...">
-            Loading...
+            <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 24px; height: 24px; vertical-align: middle;" alt="Loading...">
           `);
 
           // Fetch data for selected year
