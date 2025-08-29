@@ -495,7 +495,13 @@ function setupURLChangeDetection() {
 // MARK: GRID view
 
 function MakeGrid() {
-   const loading = $("<h3>").text("Loading…");
+   const loading = $("<div>").css({
+     textAlign: "center",
+     padding: "20px"
+   }).html(`
+     <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 48px; height: 48px;" alt="Loading...">
+     <h3 style="margin-top: 10px;">Loading…</h3>
+   `);
 
    // Year selector container
    const yearSelectorContainer = $("<div>")
@@ -1563,30 +1569,25 @@ function MakeGrid() {
              header.text("Select Data to Export");
            }
 
-           // Loading state
-           if (isLoading) {
-             const loadingSpinner = $("<div>")
-               .css({
-                 textAlign: "center",
-                 padding: "40px",
-                 color: "#666"
-               })
-               .html(`
-                 <div style="border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
-                 <div>Fetching your evaluation data...</div>
-               `);
+            // Loading state
+            if (isLoading) {
+              const loadingSpinner = $("<div>")
+                .css({
+                  textAlign: "center",
+                  padding: "40px",
+                  color: "#666"
+                })
+                .html(`
+                  <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 64px; height: 64px; margin: 0 auto 20px;" alt="Loading...">
+                  <div>Fetching your evaluation data...</div>
+                `);
 
-             popup.append(header, loadingSpinner);
-             overlay.append(popup);
-             $("body").append(overlay);
+              popup.append(header, loadingSpinner);
+              overlay.append(popup);
+              $("body").append(overlay);
 
-             // Add spinner animation
-             const style = $("<style>")
-               .text("@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }");
-             $("head").append(style);
-
-             return;
-           }
+              return;
+            }
 
            // Period selection
            const periodSection = $("<div>").css({ marginBottom: "20px" });
@@ -2311,7 +2312,10 @@ function MakeGrid() {
           statusText.text(`Loading data for ${selectedYear}-${selectedYear + 1}...`);
 
           // Disable button during loading
-          applyYearBtn.prop("disabled", true).text("Loading...");
+          applyYearBtn.prop("disabled", true).html(`
+            <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 16px; height: 16px; margin-right: 5px; vertical-align: middle;" alt="Loading...">
+            Loading...
+          `);
 
           // Fetch data for selected year
           fetchEvaluationsForYear(selectedYear)
@@ -2452,7 +2456,13 @@ function colourFor(y) {
 /* -------------------------------------------------------------------------- */
 
 function MakeGraph() {
-   const loading = $("<h3>").text("Loading…");
+   const loading = $("<div>").css({
+     textAlign: "center",
+     padding: "20px"
+   }).html(`
+     <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 48px; height: 48px;" alt="Loading...">
+     <h3 style="margin-top: 10px;">Loading…</h3>
+   `);
 
    // Year selector container for graph
    const yearSelectorContainerGraph = $("<div>")
@@ -3362,7 +3372,10 @@ function MakeGraph() {
           statusTextGraph.text(`Loading data for ${selectedYear}-${selectedYear + 1}...`);
 
           // Disable button during loading
-          applyYearBtnGraph.prop("disabled", true).text("Loading...");
+          applyYearBtnGraph.prop("disabled", true).html(`
+            <img src="https://static2.smart-school.net/smsc/svg/spinner/spinner_64x64.svg" style="width: 16px; height: 16px; margin-right: 5px; vertical-align: middle;" alt="Loading...">
+            Loading...
+          `);
 
           // Fetch data for selected year
           fetchEvaluationsForYear(selectedYear)
